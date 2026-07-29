@@ -73,7 +73,8 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
   }
 
   override async onKeyDown(ev: KeyDownEvent<AgentSlotSettings>): Promise<void> {
-    const target = resolveAgent(ev.payload.settings, this.#store.snapshot, "index")?.paneId ?? null;
+    const target =
+      resolveAgent(ev.payload.settings, this.#store.snapshot, "index")?.paneId ?? null;
     if (target === null) {
       await ev.action.showAlert();
       return;

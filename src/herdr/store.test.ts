@@ -119,6 +119,7 @@ describe("HerdrStore", () => {
       createSocket: server.createSocket,
       reconnectIntervalMs: 2_000,
       refreshDebounceMs: 150,
+      refreshMinIntervalMs: 1_000,
     });
   });
 
@@ -168,11 +169,58 @@ describe("HerdrStore", () => {
     for (let index = 0; index < 5; index += 1) {
       stream?.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
     }
-    await vi.advanceTimersByTimeAsync(150);
+    await vi.advanceTimersByTimeAsync(1_000);
     await flush();
 
     expect(server.countOf("session.snapshot")).toBe(2);
     expect(store.snapshot?.agents[0]?.title).toBe("2 回目");
+  });
+
+  it("イベントが鳴り続けても最短間隔より高い頻度では取得しない", async () => {
+    store.start();
+    await flush();
+    const stream = server.streamSocket();
+
+    // エージェントが出力している間 pane.updated は絶え間なく飛ぶ。
+    for (let elapsed = 0; elapsed < 3_000; elapsed += 100) {
+      stream?.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
+      await vi.advanceTimersByTimeAsync(100);
+      await flush();
+    }
+
+    // 初回 + 3 秒間で 3 回程度。デバウンスだけなら 20 回になる。
+    expect(server.countOf("session.snapshot")).toBeLessThanOrEqual(4);
+    expect(server.countOf("session.snapshot")).toBeGreaterThan(1);
+  });
+
+  it("見た目に効く変化が無ければ購読者に通知しない", async () => {
+    store.start();
+    await flush();
+    const listener = vi.fn();
+    store.subscribe(listener);
+    listener.mockClear();
+
+    server.streamSocket()?.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
+    await vi.advanceTimersByTimeAsync(1_000);
+    await flush();
+
+    expect(server.countOf("session.snapshot")).toBe(2);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("エージェントの状態が変われば通知する", async () => {
+    store.start();
+    await flush();
+    const listener = vi.fn();
+    store.subscribe(listener);
+    listener.mockClear();
+    server.snapshotLabels = ["初回", "2 回目"];
+
+    server.streamSocket()?.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
+    await vi.advanceTimersByTimeAsync(1_000);
+    await flush();
+
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it("購読が切れると購読者にオフラインが通知され、2 秒後に再接続する", async () => {

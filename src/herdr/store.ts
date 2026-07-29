@@ -7,7 +7,12 @@
  * 接続を閉じるため、リクエストの成否では「今つながっているか」を測れない。
  */
 
-import { RECONNECT_INTERVAL_MS, SNAPSHOT_DEBOUNCE_MS, SUBSCRIPTION_TYPES } from "../constants.js";
+import {
+  RECONNECT_INTERVAL_MS,
+  SNAPSHOT_DEBOUNCE_MS,
+  SNAPSHOT_MIN_INTERVAL_MS,
+  SUBSCRIPTION_TYPES,
+} from "../constants.js";
 import { HerdrClient, HerdrConnectionError, type HerdrEventStream } from "./client.js";
 import type { SocketFactory } from "./socket.js";
 import { parseSessionSnapshot, type SessionSnapshot } from "./types.js";
@@ -24,6 +29,7 @@ export type HerdrStoreOptions = {
   createSocket?: SocketFactory;
   reconnectIntervalMs?: number;
   refreshDebounceMs?: number;
+  refreshMinIntervalMs?: number;
   requestTimeoutMs?: number;
   /** 詳細ログの出力先。ユーザー向けメッセージではない。 */
   log?: (message: string, error?: unknown) => void;
@@ -32,15 +38,42 @@ export type HerdrStoreOptions = {
 const OFFLINE_IDLE: HerdrState = { status: "offline", reason: "herdr に接続していません" };
 const OFFLINE_FAILED: HerdrState = { status: "offline", reason: "herdr に接続できません" };
 
+/**
+ * キーの見た目に効く部分だけを取り出した指紋。
+ * ペインの revision やスクロール位置しか変わっていない更新で
+ * 再描画しないために使う。
+ */
+function stateSignature(state: HerdrState): string {
+  if (state.status === "offline") {
+    return `offline:${state.reason}`;
+  }
+  const { agents, workspaces, focusedPaneId } = state.snapshot;
+  return JSON.stringify([
+    agents.map((agent) => [
+      agent.paneId,
+      agent.workspaceId,
+      agent.agent,
+      agent.sessionId,
+      agent.status,
+      agent.title,
+    ]),
+    workspaces.map((workspace) => [workspace.workspaceId, workspace.label, workspace.number]),
+    focusedPaneId,
+  ]);
+}
+
 export class HerdrStore {
   readonly #options: HerdrStoreOptions;
   readonly #reconnectIntervalMs: number;
   readonly #refreshDebounceMs: number;
+  readonly #refreshMinIntervalMs: number;
   readonly #listeners = new Set<HerdrStateListener>();
   #socketPath: string;
   #client: HerdrClient;
   #stream: HerdrEventStream | null = null;
   #state: HerdrState = OFFLINE_IDLE;
+  #signature = stateSignature(OFFLINE_IDLE);
+  #lastFetchAt = 0;
   #refreshTimer: ReturnType<typeof setTimeout> | null = null;
   #reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   #running = false;
@@ -50,6 +83,7 @@ export class HerdrStore {
     this.#socketPath = options.socketPath;
     this.#reconnectIntervalMs = options.reconnectIntervalMs ?? RECONNECT_INTERVAL_MS;
     this.#refreshDebounceMs = options.refreshDebounceMs ?? SNAPSHOT_DEBOUNCE_MS;
+    this.#refreshMinIntervalMs = options.refreshMinIntervalMs ?? SNAPSHOT_MIN_INTERVAL_MS;
     this.#client = this.#createClient();
   }
 
@@ -151,6 +185,7 @@ export class HerdrStore {
   }
 
   async #fetchSnapshot(): Promise<SessionSnapshot> {
+    this.#lastFetchAt = Date.now();
     const result = await this.#client.request("session.snapshot");
     const snapshot = parseSessionSnapshot(result);
     if (snapshot === null) {
@@ -161,16 +196,20 @@ export class HerdrStore {
 
   /**
    * イベントを合図にスナップショットを取り直す。連続して届くイベントは
-   * 1 回の再取得にまとめる。
+   * 1 回の再取得にまとめ、さらに最短間隔で頭打ちにする。
+   * エージェントが出力している間 `pane.updated` は止まらないため、
+   * デバウンスだけでは取得が延々と続いてしまう。
    */
   #scheduleRefresh(): void {
     if (this.#refreshTimer !== null) {
       return;
     }
+    const sinceLastFetch = Date.now() - this.#lastFetchAt;
+    const delay = Math.max(this.#refreshDebounceMs, this.#refreshMinIntervalMs - sinceLastFetch);
     this.#refreshTimer = setTimeout(() => {
       this.#refreshTimer = null;
       void this.#refresh();
-    }, this.#refreshDebounceMs);
+    }, delay);
   }
 
   async #refresh(): Promise<void> {
@@ -218,9 +257,17 @@ export class HerdrStore {
     }
   }
 
-  /** 状態は書き換えず、新しいオブジェクトへ差し替えてから通知する。 */
+  /**
+   * 状態は書き換えず、新しいオブジェクトへ差し替えてから通知する。
+   * キーの見た目に効かない変化（ペインの revision など）では通知しない。
+   */
   #setState(next: HerdrState): void {
+    const signature = stateSignature(next);
     this.#state = next;
+    if (signature === this.#signature) {
+      return;
+    }
+    this.#signature = signature;
     for (const listener of [...this.#listeners]) {
       listener(next);
     }

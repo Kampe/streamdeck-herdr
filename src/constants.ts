@@ -30,6 +30,13 @@ export const RECONNECT_INTERVAL_MS = 2_000;
 /** イベントを受けてからスナップショットを取り直すまでの待ち時間（連続イベントをまとめる）。 */
 export const SNAPSHOT_DEBOUNCE_MS = 150;
 
+/**
+ * スナップショット再取得の最短間隔。
+ * エージェントが出力している間 `pane.updated` が絶え間なく飛ぶため、
+ * デバウンスだけでは取得が止まらない。上限を設けて頭打ちにする。
+ */
+export const SNAPSHOT_MIN_INTERVAL_MS = 1_000;
+
 /** 1 リクエストの応答を待つ上限。 */
 export const REQUEST_TIMEOUT_MS = 5_000;
 
