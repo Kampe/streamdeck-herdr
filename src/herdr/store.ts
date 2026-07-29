@@ -8,14 +8,20 @@
  */
 
 import {
+  AGENT_STATUS_EVENT,
   RECONNECT_INTERVAL_MS,
   SNAPSHOT_DEBOUNCE_MS,
   SNAPSHOT_MIN_INTERVAL_MS,
-  SUBSCRIPTION_TYPES,
+  STRUCTURE_SUBSCRIPTION_TYPES,
 } from "../constants.js";
-import { HerdrClient, HerdrConnectionError, type HerdrEventStream } from "./client.js";
+import {
+  HerdrClient,
+  HerdrConnectionError,
+  type HerdrEventStream,
+  type Subscription,
+} from "./client.js";
 import type { SocketFactory } from "./socket.js";
-import { parseSessionSnapshot, type SessionSnapshot } from "./types.js";
+import { parseAgentStatusChange, parseSessionSnapshot, type SessionSnapshot } from "./types.js";
 
 /** 現在 herdr に繋がっているかどうかと、繋がっていれば最新のスナップショット。 */
 export type HerdrState =
@@ -62,6 +68,15 @@ function stateSignature(state: HerdrState): string {
   ]);
 }
 
+/** 状態変化を購読すべきペイン（エージェントのいるペイン）。 */
+function agentPaneIds(snapshot: SessionSnapshot): string[] {
+  return snapshot.agents.map((agent) => agent.paneId).sort();
+}
+
+function sameIds(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
 export class HerdrStore {
   readonly #options: HerdrStoreOptions;
   readonly #reconnectIntervalMs: number;
@@ -71,6 +86,8 @@ export class HerdrStore {
   #socketPath: string;
   #client: HerdrClient;
   #stream: HerdrEventStream | null = null;
+  /** いま `pane.agent_status_changed` を購読しているペイン。 */
+  #subscribedPanes: string[] = [];
   #state: HerdrState = OFFLINE_IDLE;
   #signature = stateSignature(OFFLINE_IDLE);
   #lastFetchAt = 0;
@@ -142,6 +159,7 @@ export class HerdrStore {
     this.#clearTimers();
     this.#stream?.close();
     this.#stream = null;
+    this.#subscribedPanes = [];
     this.#setState(OFFLINE_IDLE);
   }
 
@@ -164,13 +182,17 @@ export class HerdrStore {
     });
   }
 
+  /**
+   * 接続してイベントを購読する。
+   *
+   * ペイン単位の状態変化を購読するには先にペインの一覧が要るので、
+   * スナップショットを取ってから購読を張る。購読が張られるまでの隙間に
+   * 起きた変化を取りこぼさないよう、張った直後にもう 1 度取り直す。
+   */
   async #connect(): Promise<void> {
     try {
-      const stream = await this.#client.openEventStream(SUBSCRIPTION_TYPES, {
-        onEvent: () => this.#scheduleRefresh(),
-        onClose: (error) => this.#handleClose(error),
-      });
-      this.#stream = stream;
+      const initial = await this.#fetchSnapshot();
+      this.#stream = await this.#openStream(initial);
 
       const snapshot = await this.#fetchSnapshot();
       this.#options.log?.(`herdr に接続しました: ${this.#socketPath}`);
@@ -181,6 +203,63 @@ export class HerdrStore {
       this.#options.log?.(`herdr への接続に失敗しました: ${this.#socketPath}`, error);
       this.#setState(OFFLINE_FAILED);
       this.#scheduleReconnect();
+    }
+  }
+
+  #openStream(snapshot: SessionSnapshot): Promise<HerdrEventStream> {
+    this.#subscribedPanes = agentPaneIds(snapshot);
+    const subscriptions: Subscription[] = [
+      ...STRUCTURE_SUBSCRIPTION_TYPES.map((type) => ({ type })),
+      ...this.#subscribedPanes.map((paneId) => ({
+        type: AGENT_STATUS_EVENT,
+        pane_id: paneId,
+      })),
+    ];
+
+    return this.#client.openEventStream(subscriptions, {
+      onEvent: (event, data) => this.#handleEvent(event, data),
+      onClose: (error) => this.#handleClose(error),
+    });
+  }
+
+  /**
+   * エージェントの状態変化はイベントの中身をそのまま反映する。
+   * スナップショットを取り直すより速く、取り直しの間隔にも縛られない。
+   * それ以外（ペインやワークスペースの増減）は取り直しで拾う。
+   */
+  #handleEvent(event: string, data: unknown): void {
+    if (event === AGENT_STATUS_EVENT) {
+      this.#applyStatusChange(data);
+      return;
+    }
+    this.#scheduleRefresh();
+  }
+
+  #applyStatusChange(data: unknown): void {
+    const change = parseAgentStatusChange(data);
+    const state = this.#state;
+    if (change === null || state.status !== "online") {
+      return;
+    }
+
+    this.#options.log?.(`${change.paneId} の状態が ${change.status} になりました`);
+    const agents = state.snapshot.agents.map((agent) =>
+      agent.paneId === change.paneId
+        ? { ...agent, status: change.status, agent: change.agent ?? agent.agent }
+        : agent,
+    );
+    this.#setState({ status: "online", snapshot: { ...state.snapshot, agents } });
+  }
+
+  /** エージェントのいるペインが入れ替わったら、購読を張り直す。 */
+  async #resubscribe(snapshot: SessionSnapshot): Promise<void> {
+    const previous = this.#stream;
+    try {
+      const stream = await this.#openStream(snapshot);
+      previous?.close();
+      this.#stream = stream;
+    } catch (error) {
+      this.#options.log?.("購読の張り直しに失敗しました", error);
     }
   }
 
@@ -217,7 +296,11 @@ export class HerdrStore {
       return;
     }
     try {
-      this.#setState({ status: "online", snapshot: await this.#fetchSnapshot() });
+      const snapshot = await this.#fetchSnapshot();
+      this.#setState({ status: "online", snapshot });
+      if (!sameIds(agentPaneIds(snapshot), this.#subscribedPanes)) {
+        await this.#resubscribe(snapshot);
+      }
     } catch (error) {
       // 購読接続が生きている限りオフラインにはしない。次のイベントで取り直す。
       this.#options.log?.("スナップショットの再取得に失敗しました", error);

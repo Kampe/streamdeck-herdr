@@ -130,7 +130,7 @@ describe("HerdrClient.openEventStream", () => {
   /** 購読が確立した状態のストリームとソケットを用意する。 */
   async function subscribed(onEvent = vi.fn(), onClose = vi.fn()) {
     const { sockets, createSocket } = collector();
-    const opening = client(createSocket).openEventStream(["pane.updated"], { onEvent, onClose });
+    const opening = client(createSocket).openEventStream([{ type: "pane.updated" }], { onEvent, onClose });
     const socket = sockets[0];
     if (socket === undefined) {
       throw new Error("ソケットが生成されていません");
@@ -165,7 +165,7 @@ describe("HerdrClient.openEventStream", () => {
   it("確立前に切断されたら棄却する", async () => {
     const { sockets, createSocket } = collector();
 
-    const opening = client(createSocket).openEventStream(["pane.updated"], {
+    const opening = client(createSocket).openEventStream([{ type: "pane.updated" }], {
       onEvent: vi.fn(),
       onClose: vi.fn(),
     });

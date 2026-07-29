@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseHerdrMessage, parseSessionSnapshot } from "./types.js";
+import { parseAgentStatusChange, parseHerdrMessage, parseSessionSnapshot } from "./types.js";
 
 /** `session.snapshot` の応答 1 件分を組み立てる。 */
 function snapshotResult(overrides: Record<string, unknown> = {}): unknown {
@@ -141,6 +141,38 @@ describe("parseSessionSnapshot", () => {
     const snapshot = parseSessionSnapshot(snapshotResult({ focused_pane_id: undefined }));
 
     expect(snapshot?.focusedPaneId).toBeNull();
+  });
+});
+
+describe("parseAgentStatusChange", () => {
+  it("ペインと状態を取り出す", () => {
+    expect(
+      parseAgentStatusChange({
+        agent: "claude",
+        agent_status: "blocked",
+        pane_id: "wD:p1",
+        workspace_id: "wD",
+      }),
+    ).toEqual({ paneId: "wD:p1", status: "blocked", agent: "claude" });
+  });
+
+  it("種別が無くても状態は取り出す", () => {
+    expect(parseAgentStatusChange({ agent_status: "idle", pane_id: "wD:p1" })).toEqual({
+      paneId: "wD:p1",
+      status: "idle",
+      agent: null,
+    });
+  });
+
+  it("未知の状態は unknown に落とす", () => {
+    expect(parseAgentStatusChange({ agent_status: "compiling", pane_id: "wD:p1" })?.status).toBe(
+      "unknown",
+    );
+  });
+
+  it("ペインを特定できなければ null を返す", () => {
+    expect(parseAgentStatusChange({ agent_status: "idle" })).toBeNull();
+    expect(parseAgentStatusChange(null)).toBeNull();
   });
 });
 

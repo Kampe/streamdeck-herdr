@@ -46,6 +46,11 @@ export type HerdrEventStream = {
   close(): void;
 };
 
+/**
+ * 購読 1 件。`type` のほか、ペイン単位のイベントでは `pane_id` を伴う。
+ */
+export type Subscription = { type: string; pane_id?: string };
+
 const REQUEST_ID = "sd-request";
 const SUBSCRIBE_ID = "sd-subscribe";
 
@@ -119,7 +124,7 @@ export class HerdrClient {
    * イベントが流れ続ける。確立前に閉じた場合は棄却する。
    */
   openEventStream(
-    types: readonly string[],
+    subscriptions: readonly Subscription[],
     handlers: EventStreamHandlers,
   ): Promise<HerdrEventStream> {
     return new Promise<HerdrEventStream>((resolve, reject) => {
@@ -138,7 +143,7 @@ export class HerdrClient {
             connection?.send({
               id: SUBSCRIBE_ID,
               method: "events.subscribe",
-              params: { subscriptions: types.map((type) => ({ type })) },
+              params: { subscriptions },
             }),
           onMessage: (message) => {
             if (message.kind === "event") {

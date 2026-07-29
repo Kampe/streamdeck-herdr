@@ -44,6 +44,14 @@ export type SessionSnapshot = {
   focusedPaneId: string | null;
 };
 
+/** `pane.agent_status_changed` イベントの中身。 */
+export type AgentStatusChange = {
+  paneId: string;
+  status: AgentStatus;
+  /** エージェント種別。イベントに含まれないこともある。 */
+  agent: string | null;
+};
+
 /** ソケットから届く 1 行を分類したもの。 */
 export type HerdrMessage =
   | { kind: "result"; id: string; result: unknown }
@@ -151,6 +159,21 @@ export function parseSessionSnapshot(value: unknown): SessionSnapshot | null {
     agents,
     workspaces,
     focusedPaneId: isString(snapshot.focused_pane_id) ? snapshot.focused_pane_id : null,
+  };
+}
+
+/**
+ * `pane.agent_status_changed` の `data` を検証する。
+ * ペインを特定できなければ null（どのキーに反映すべきか決められないため）。
+ */
+export function parseAgentStatusChange(value: unknown): AgentStatusChange | null {
+  if (!isRecord(value) || !isString(value.pane_id)) {
+    return null;
+  }
+  return {
+    paneId: value.pane_id,
+    status: parseAgentStatus(value.agent_status),
+    agent: isString(value.agent) ? value.agent : null,
   };
 }
 

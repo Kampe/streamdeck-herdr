@@ -4,22 +4,26 @@ import { HerdrConnectionError } from "./client.js";
 import { FakeSocket } from "./fake-socket.js";
 import { HerdrStore, type HerdrState } from "./store.js";
 
-/** `session.snapshot` の応答 1 件分。`label` で世代を見分ける。 */
-function snapshotResult(label: string): unknown {
+type AgentSpec = { paneId: string; workspaceId: string; status: string; title: string };
+
+const DEFAULT_AGENTS: AgentSpec[] = [
+  { paneId: "wE:p1", workspaceId: "wE", status: "working", title: "初回" },
+];
+
+/** `session.snapshot` の応答 1 件分。 */
+function snapshotResult(agents: AgentSpec[]): unknown {
   return {
     type: "session_snapshot",
     snapshot: {
       focused_pane_id: "wE:p1",
-      agents: [
-        {
-          pane_id: "wE:p1",
-          workspace_id: "wE",
-          tab_id: "wE:t1",
-          agent: "claude",
-          agent_status: "working",
-          terminal_title_stripped: label,
-        },
-      ],
+      agents: agents.map((agent) => ({
+        pane_id: agent.paneId,
+        workspace_id: agent.workspaceId,
+        tab_id: `${agent.workspaceId}:t1`,
+        agent: "claude",
+        agent_status: agent.status,
+        terminal_title_stripped: agent.title,
+      })),
       workspaces: [{ workspace_id: "wE", label: "example", number: 1 }],
     },
   };
@@ -45,7 +49,7 @@ class ScriptedSocket extends FakeSocket {
       const request = JSON.parse(line) as SentRequest;
       this.requests.push(request);
       this.method = request.method;
-      this.server.record(request.method);
+      this.server.record(request);
       queueMicrotask(() => this.#respond(request));
     }
     return true;
@@ -58,7 +62,7 @@ class ScriptedSocket extends FakeSocket {
     }
     const result =
       request.method === "session.snapshot"
-        ? snapshotResult(this.server.nextSnapshotLabel())
+        ? snapshotResult(this.server.agents)
         : { type: "ok" };
     this.receiveMessage({ id: request.id, result });
     // herdr は応答後に接続を閉じる。
@@ -66,11 +70,11 @@ class ScriptedSocket extends FakeSocket {
   }
 }
 
-/** 生成されたソケットとリクエスト回数を記録する。 */
+/** 生成されたソケットとリクエストを記録する。 */
 class FakeHerdrServer {
   readonly sockets: ScriptedSocket[] = [];
-  readonly methodCounts = new Map<string, number>();
-  snapshotLabels = ["初回"];
+  readonly requests: SentRequest[] = [];
+  agents: AgentSpec[] = [...DEFAULT_AGENTS];
 
   createSocket = (): ScriptedSocket => {
     const socket = new ScriptedSocket(this);
@@ -79,12 +83,19 @@ class FakeHerdrServer {
     return socket;
   };
 
-  record(method: string): void {
-    this.methodCounts.set(method, (this.methodCounts.get(method) ?? 0) + 1);
+  record(request: SentRequest): void {
+    this.requests.push(request);
   }
 
   countOf(method: string): number {
-    return this.methodCounts.get(method) ?? 0;
+    return this.requests.filter((request) => request.method === method).length;
+  }
+
+  /** 直近の購読リクエストで送った購読一覧。 */
+  lastSubscriptions(): { type: string; pane_id?: string }[] {
+    const subscribes = this.requests.filter((request) => request.method === "events.subscribe");
+    const last = subscribes[subscribes.length - 1];
+    return (last?.params.subscriptions ?? []) as { type: string; pane_id?: string }[];
   }
 
   /** 購読中の（＝まだ閉じていない）ソケット。 */
@@ -92,11 +103,6 @@ class FakeHerdrServer {
     return this.sockets.find(
       (socket) => socket.method === "events.subscribe" && !socket.destroyed,
     );
-  }
-
-  nextSnapshotLabel(): string {
-    const index = Math.min(this.countOf("session.snapshot") - 1, this.snapshotLabels.length - 1);
-    return this.snapshotLabels[index] ?? "初回";
   }
 }
 
@@ -128,14 +134,37 @@ describe("HerdrStore", () => {
     vi.useRealTimers();
   });
 
-  it("購読を張ってからスナップショットを取得する", async () => {
+  it("スナップショットを取ってから購読を張り、もう 1 度取り直す", async () => {
     store.start();
     await flush();
 
-    expect(server.countOf("events.subscribe")).toBe(1);
-    expect(server.countOf("session.snapshot")).toBe(1);
+    expect(server.requests.map((request) => request.method)).toEqual([
+      "session.snapshot",
+      "events.subscribe",
+      "session.snapshot",
+    ]);
     expect(store.state.status).toBe("online");
     expect(store.snapshot?.agents[0]?.paneId).toBe("wE:p1");
+  });
+
+  it("エージェントのいるペインごとに状態変化を購読する", async () => {
+    store.start();
+    await flush();
+
+    expect(server.lastSubscriptions()).toContainEqual({
+      type: "pane.agent_status_changed",
+      pane_id: "wE:p1",
+    });
+  });
+
+  it("出力のたびに飛ぶイベントは購読しない", async () => {
+    store.start();
+    await flush();
+
+    const types = server.lastSubscriptions().map((subscription) => subscription.type);
+    expect(types).not.toContain("pane.updated");
+    expect(types).not.toContain("workspace.focused");
+    expect(types).not.toContain("tab.focused");
   });
 
   it("購読の接続は開いたまま、リクエストの接続は閉じる", async () => {
@@ -160,37 +189,54 @@ describe("HerdrStore", () => {
     expect(states[0]?.status).toBe("online");
   });
 
-  it("短時間に届いたイベントは 1 回の再取得にまとまる", async () => {
+  it("状態変化イベントはスナップショットを待たずに即座に反映する", async () => {
     store.start();
     await flush();
-    server.snapshotLabels = ["初回", "2 回目"];
+    const listener = vi.fn();
+    store.subscribe(listener);
+    listener.mockClear();
+    const before = server.countOf("session.snapshot");
 
-    const stream = server.streamSocket();
-    for (let index = 0; index < 5; index += 1) {
-      stream?.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
-    }
-    await vi.advanceTimersByTimeAsync(1_000);
-    await flush();
+    server.streamSocket()?.receiveMessage({
+      event: "pane.agent_status_changed",
+      data: { pane_id: "wE:p1", agent_status: "blocked", agent: "claude" },
+    });
 
-    expect(server.countOf("session.snapshot")).toBe(2);
-    expect(store.snapshot?.agents[0]?.title).toBe("2 回目");
+    expect(store.snapshot?.agents[0]?.status).toBe("blocked");
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(server.countOf("session.snapshot")).toBe(before);
   });
 
-  it("イベントが鳴り続けても最短間隔より高い頻度では取得しない", async () => {
+  it("知らないペインの状態変化は無視する", async () => {
     store.start();
     await flush();
-    const stream = server.streamSocket();
+    const listener = vi.fn();
+    store.subscribe(listener);
+    listener.mockClear();
 
-    // エージェントが出力している間 pane.updated は絶え間なく飛ぶ。
+    server.streamSocket()?.receiveMessage({
+      event: "pane.agent_status_changed",
+      data: { pane_id: "wZ:p9", agent_status: "blocked" },
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("構成の変化イベントは最短間隔でまとめて取り直す", async () => {
+    store.start();
+    await flush();
+    const before = server.countOf("session.snapshot");
+
+    const stream = server.streamSocket();
     for (let elapsed = 0; elapsed < 3_000; elapsed += 100) {
-      stream?.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
+      stream?.receiveMessage({ event: "pane_created", data: { pane_id: "wE:p2" } });
       await vi.advanceTimersByTimeAsync(100);
       await flush();
     }
 
-    // 初回 + 3 秒間で 3 回程度。デバウンスだけなら 20 回になる。
-    expect(server.countOf("session.snapshot")).toBeLessThanOrEqual(4);
-    expect(server.countOf("session.snapshot")).toBeGreaterThan(1);
+    // 3 秒で 3 回程度。デバウンスだけなら 20 回を超える。
+    expect(server.countOf("session.snapshot") - before).toBeLessThanOrEqual(4);
+    expect(server.countOf("session.snapshot") - before).toBeGreaterThan(0);
   });
 
   it("見た目に効く変化が無ければ購読者に通知しない", async () => {
@@ -200,27 +246,31 @@ describe("HerdrStore", () => {
     store.subscribe(listener);
     listener.mockClear();
 
-    server.streamSocket()?.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
+    server.streamSocket()?.receiveMessage({ event: "pane_created", data: {} });
     await vi.advanceTimersByTimeAsync(1_000);
     await flush();
 
-    expect(server.countOf("session.snapshot")).toBe(2);
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("エージェントの状態が変われば通知する", async () => {
+  it("エージェントのペインが入れ替わったら購読を張り直す", async () => {
     store.start();
     await flush();
-    const listener = vi.fn();
-    store.subscribe(listener);
-    listener.mockClear();
-    server.snapshotLabels = ["初回", "2 回目"];
+    const before = server.countOf("events.subscribe");
+    server.agents = [
+      ...DEFAULT_AGENTS,
+      { paneId: "wA:p1", workspaceId: "wA", status: "idle", title: "追加" },
+    ];
 
-    server.streamSocket()?.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
+    server.streamSocket()?.receiveMessage({ event: "pane_agent_detected", data: {} });
     await vi.advanceTimersByTimeAsync(1_000);
     await flush();
 
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(server.countOf("events.subscribe")).toBe(before + 1);
+    expect(server.lastSubscriptions()).toContainEqual({
+      type: "pane.agent_status_changed",
+      pane_id: "wA:p1",
+    });
   });
 
   it("購読が切れると購読者にオフラインが通知され、2 秒後に再接続する", async () => {
@@ -235,10 +285,11 @@ describe("HerdrStore", () => {
     expect(store.state.status).toBe("offline");
     expect(states.at(-1)?.status).toBe("offline");
 
+    const before = server.countOf("events.subscribe");
     await vi.advanceTimersByTimeAsync(2_000);
     await flush();
 
-    expect(server.countOf("events.subscribe")).toBe(2);
+    expect(server.countOf("events.subscribe")).toBe(before + 1);
     expect(store.state.status).toBe("online");
   });
 
@@ -272,12 +323,13 @@ describe("HerdrStore", () => {
   it("stop() すると再接続しない", async () => {
     store.start();
     await flush();
+    const before = server.countOf("events.subscribe");
 
     store.stop();
     await vi.advanceTimersByTimeAsync(10_000);
     await flush();
 
-    expect(server.countOf("events.subscribe")).toBe(1);
+    expect(server.countOf("events.subscribe")).toBe(before);
     expect(store.state.status).toBe("offline");
   });
 });

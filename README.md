@@ -75,4 +75,6 @@ npm run validate  # streamdeck validate
 
 仕様は [spec/herdr-control.md](spec/herdr-control.md)、実装計画は [tasks/plan.md](tasks/plan.md)。
 
-herdr の API は「1 リクエスト 1 接続」で、応答を返すとサーバー側が接続を閉じる。長寿命の接続はイベント購読だけで、状態はイベントを合図に `session.snapshot` を取り直して更新している。
+herdr の API は「1 リクエスト 1 接続」で、応答を返すとサーバー側が接続を閉じる。長寿命の接続はイベント購読だけ。
+
+エージェントの状態はペインごとの `pane.agent_status_changed` を購読してその場で反映する（10〜100 ms で色が変わる）。ペインやワークスペースの増減は低頻度のイベントを合図に `session.snapshot` を取り直す。`pane.updated` はエージェントの出力中に毎秒 30 件近く流れるため購読していない。

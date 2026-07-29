@@ -41,22 +41,30 @@ export const SNAPSHOT_MIN_INTERVAL_MS = 1_000;
 export const REQUEST_TIMEOUT_MS = 5_000;
 
 /**
- * 購読するイベント種別。`pane.agent_status_changed` は購読時に `pane_id` を要求し
- * スロットの割り当てが変わるたびに張り替えが要るため使わない。
- * ペインの状態変化は `pane.updated` で拾える。
+ * 構成の変化を知るために購読するイベント種別。
+ *
+ * `pane.updated` / `workspace.focused` / `tab.focused` は入れない。エージェントが
+ * 出力している間これらが毎秒 30 件近く流れ、スナップショットの取り直しが止まらなくなる。
+ * ここで拾うのはペインやワークスペースの増減・改名・フォーカス移動だけにする。
  */
-export const SUBSCRIPTION_TYPES: readonly string[] = [
+export const STRUCTURE_SUBSCRIPTION_TYPES: readonly string[] = [
   "workspace.created",
-  "workspace.updated",
+  "workspace.renamed",
   "workspace.closed",
-  "workspace.focused",
   "tab.created",
   "tab.closed",
-  "tab.focused",
   "pane.created",
-  "pane.updated",
   "pane.closed",
+  "pane.focused",
+  "pane.agent_detected",
 ];
+
+/**
+ * エージェントの状態変化イベント。購読時に `pane_id` を要求するため、
+ * エージェントのいるペインごとに購読する。状態はこのイベントで即座に反映し、
+ * スナップショットの取り直しを待たない。
+ */
+export const AGENT_STATUS_EVENT = "pane.agent_status_changed";
 
 /** 状態ごとのキー背景色（spec/herdr-control.md 5.4「表示」）。 */
 export const STATUS_COLORS: Record<AgentStatus, string> = {
