@@ -3,8 +3,55 @@
   <head>
     <meta charset="utf-8" />
     <title>中断</title>
+    <script src="lib/sdpi-components.js"></script>
+    <script src="lib/toggle.js"></script>
   </head>
   <body>
-    <!-- TODO(T11): Property Inspector 実装 -->
+    <sdpi-item label="対象">
+      <sdpi-select id="binding" setting="binding" default="focused">
+        <option value="focused">フォーカス中のエージェント</option>
+        <option value="index">順番で指定</option>
+        <option value="session">エージェントを固定</option>
+      </sdpi-select>
+    </sdpi-item>
+
+    <sdpi-item id="row-index" label="順番" hidden>
+      <sdpi-range
+        setting="index"
+        value-type="number"
+        min="1"
+        max="8"
+        step="1"
+        default="1"
+        showlabels
+      ></sdpi-range>
+    </sdpi-item>
+
+    <sdpi-item id="row-session" label="エージェント" hidden>
+      <sdpi-select
+        setting="sessionId"
+        datasource="getAgents"
+        loading="読み込み中…"
+        placeholder="エージェントを選択"
+        show-refresh
+        hot-reload
+      ></sdpi-select>
+    </sdpi-item>
+
+    <sdpi-item label="キーの表示名">
+      <sdpi-textfield setting="label" maxlength="12" placeholder="中断"></sdpi-textfield>
+    </sdpi-item>
+
+    <sdpi-item label="ソケットパス">
+      <sdpi-textfield
+        setting="socketPath"
+        global
+        placeholder="~/.config/herdr/herdr.sock"
+      ></sdpi-textfield>
+    </sdpi-item>
+
+    <script>
+      bindToggle("binding", { "row-index": ["index"], "row-session": ["session"] });
+    </script>
   </body>
 </html>

@@ -6,6 +6,11 @@
 
 import streamDeck from "@elgato/streamdeck";
 
+import {
+  AGENT_DATA_SOURCE,
+  agentDataSourceItems,
+  isAgentDataSourceRequest,
+} from "./actions/agent-datasource.js";
 import { AgentSlot } from "./actions/agent-slot.js";
 import { Interrupt } from "./actions/interrupt.js";
 import { Prompt } from "./actions/prompt.js";
@@ -33,4 +38,15 @@ store.start();
 
 streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) => {
   store.setSocketPath(ev.settings.socketPath ?? DEFAULT_SOCKET_PATH);
+});
+
+// Property Inspector のエージェント一覧は、プラグインが持っている状態から返す。
+streamDeck.ui.onSendToPlugin((ev) => {
+  if (!isAgentDataSourceRequest(ev.payload)) {
+    return;
+  }
+  void streamDeck.ui.sendToPropertyInspector({
+    event: AGENT_DATA_SOURCE,
+    items: agentDataSourceItems(store.snapshot),
+  });
 });
