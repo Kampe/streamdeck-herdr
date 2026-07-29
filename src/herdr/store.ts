@@ -3,15 +3,12 @@
  *
  * イベントの差分を自前で適用するのではなく、イベントを合図に
  * `session.snapshot` を取り直す（spec/herdr-control.md 5.1）。
- * 実体と状態がずれず、購読の張り替えも要らない。
+ * 接続の生死は購読接続で判断する。herdr は通常のリクエストでは応答後に
+ * 接続を閉じるため、リクエストの成否では「今つながっているか」を測れない。
  */
 
-import {
-  RECONNECT_INTERVAL_MS,
-  SNAPSHOT_DEBOUNCE_MS,
-  SUBSCRIPTION_TYPES,
-} from "../constants.js";
-import { HerdrClient, HerdrConnectionError } from "./client.js";
+import { RECONNECT_INTERVAL_MS, SNAPSHOT_DEBOUNCE_MS, SUBSCRIPTION_TYPES } from "../constants.js";
+import { HerdrClient, HerdrConnectionError, type HerdrEventStream } from "./client.js";
 import type { SocketFactory } from "./socket.js";
 import { parseSessionSnapshot, type SessionSnapshot } from "./types.js";
 
@@ -27,9 +24,13 @@ export type HerdrStoreOptions = {
   createSocket?: SocketFactory;
   reconnectIntervalMs?: number;
   refreshDebounceMs?: number;
+  requestTimeoutMs?: number;
   /** 詳細ログの出力先。ユーザー向けメッセージではない。 */
   log?: (message: string, error?: unknown) => void;
 };
+
+const OFFLINE_IDLE: HerdrState = { status: "offline", reason: "herdr に接続していません" };
+const OFFLINE_FAILED: HerdrState = { status: "offline", reason: "herdr に接続できません" };
 
 export class HerdrStore {
   readonly #options: HerdrStoreOptions;
@@ -37,8 +38,9 @@ export class HerdrStore {
   readonly #refreshDebounceMs: number;
   readonly #listeners = new Set<HerdrStateListener>();
   #socketPath: string;
-  #client: HerdrClient | null = null;
-  #state: HerdrState = { status: "offline", reason: "herdr に接続していません" };
+  #client: HerdrClient;
+  #stream: HerdrEventStream | null = null;
+  #state: HerdrState = OFFLINE_IDLE;
   #refreshTimer: ReturnType<typeof setTimeout> | null = null;
   #reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   #running = false;
@@ -48,6 +50,7 @@ export class HerdrStore {
     this.#socketPath = options.socketPath;
     this.#reconnectIntervalMs = options.reconnectIntervalMs ?? RECONNECT_INTERVAL_MS;
     this.#refreshDebounceMs = options.refreshDebounceMs ?? SNAPSHOT_DEBOUNCE_MS;
+    this.#client = this.#createClient();
   }
 
   get state(): HerdrState {
@@ -92,6 +95,7 @@ export class HerdrStore {
       return;
     }
     this.#socketPath = socketPath;
+    this.#client = this.#createClient();
     if (this.#running) {
       this.stop();
       this.start();
@@ -102,9 +106,9 @@ export class HerdrStore {
   stop(): void {
     this.#running = false;
     this.#clearTimers();
-    this.#client?.close();
-    this.#client = null;
-    this.#setState({ status: "offline", reason: "herdr に接続していません" });
+    this.#stream?.close();
+    this.#stream = null;
+    this.#setState(OFFLINE_IDLE);
   }
 
   /**
@@ -112,38 +116,42 @@ export class HerdrStore {
    * （接続が切れている間は API を叩かない: spec 8章「Always」）。
    */
   async request(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
-    const client = this.#client;
-    if (client === null || !client.isOpen) {
+    if (this.#stream === null) {
       throw new HerdrConnectionError("herdr に接続していません");
     }
-    return client.request(method, params);
+    return this.#client.request(method, params);
+  }
+
+  #createClient(): HerdrClient {
+    return new HerdrClient({
+      socketPath: this.#socketPath,
+      createSocket: this.#options.createSocket,
+      requestTimeoutMs: this.#options.requestTimeoutMs,
+    });
   }
 
   async #connect(): Promise<void> {
-    const client = new HerdrClient({
-      socketPath: this.#socketPath,
-      createSocket: this.#options.createSocket,
-      onEvent: () => this.#scheduleRefresh(),
-      onClose: (error) => this.#handleClose(error),
-    });
-
     try {
-      await client.connect();
-      this.#client = client;
-      const snapshot = await this.#fetchSnapshot(client);
-      await client.subscribe(SUBSCRIPTION_TYPES);
+      const stream = await this.#client.openEventStream(SUBSCRIPTION_TYPES, {
+        onEvent: () => this.#scheduleRefresh(),
+        onClose: (error) => this.#handleClose(error),
+      });
+      this.#stream = stream;
+
+      const snapshot = await this.#fetchSnapshot();
+      this.#options.log?.(`herdr に接続しました: ${this.#socketPath}`);
       this.#setState({ status: "online", snapshot });
     } catch (error) {
-      client.close();
-      this.#client = null;
-      this.#options.log?.("herdr への接続に失敗しました", error);
-      this.#setState({ status: "offline", reason: "herdr に接続できません" });
+      this.#stream?.close();
+      this.#stream = null;
+      this.#options.log?.(`herdr への接続に失敗しました: ${this.#socketPath}`, error);
+      this.#setState(OFFLINE_FAILED);
       this.#scheduleReconnect();
     }
   }
 
-  async #fetchSnapshot(client: HerdrClient): Promise<SessionSnapshot> {
-    const result = await client.request("session.snapshot");
+  async #fetchSnapshot(): Promise<SessionSnapshot> {
+    const result = await this.#client.request("session.snapshot");
     const snapshot = parseSessionSnapshot(result);
     if (snapshot === null) {
       throw new TypeError("session.snapshot の応答を解釈できません");
@@ -166,24 +174,22 @@ export class HerdrStore {
   }
 
   async #refresh(): Promise<void> {
-    const client = this.#client;
-    if (client === null || !client.isOpen) {
+    if (this.#stream === null) {
       return;
     }
     try {
-      const snapshot = await this.#fetchSnapshot(client);
-      this.#setState({ status: "online", snapshot });
+      this.#setState({ status: "online", snapshot: await this.#fetchSnapshot() });
     } catch (error) {
-      // 切断なら onClose 側でオフラインに落ちる。ここでは記録だけして次のイベントを待つ。
+      // 購読接続が生きている限りオフラインにはしない。次のイベントで取り直す。
       this.#options.log?.("スナップショットの再取得に失敗しました", error);
     }
   }
 
   #handleClose(error: Error | null): void {
-    this.#client = null;
+    this.#stream = null;
     this.#clearRefreshTimer();
     this.#options.log?.("herdr との接続が切れました", error);
-    this.#setState({ status: "offline", reason: "herdr に接続できません" });
+    this.#setState(OFFLINE_FAILED);
     this.#scheduleReconnect();
   }
 

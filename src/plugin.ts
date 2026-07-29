@@ -21,7 +21,8 @@ import type { GlobalSettings } from "./settings.js";
 
 const store = new HerdrStore({
   socketPath: DEFAULT_SOCKET_PATH,
-  log: (message, error) => streamDeck.logger.warn(message, error),
+  log: (message, error) =>
+    error === undefined ? streamDeck.logger.info(message) : streamDeck.logger.warn(message, error),
 });
 
 streamDeck.actions.registerAction(new AgentSlot(store));

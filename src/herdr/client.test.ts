@@ -5,187 +5,195 @@ import { FakeSocket } from "./fake-socket.js";
 
 const SOCKET_PATH = "/tmp/fake-herdr.sock";
 
-/** 接続済みのクライアントとフェイクソケットを用意する。 */
-async function connected(
-  options: Partial<{
-    onEvent: (event: string, data: unknown) => void;
-    onClose: (error: Error | null) => void;
-  }> = {},
-): Promise<{ client: HerdrClient; socket: FakeSocket }> {
-  const socket = new FakeSocket();
-  const client = new HerdrClient({
-    socketPath: SOCKET_PATH,
-    createSocket: () => socket,
-    ...options,
-  });
-  const connecting = client.connect();
-  socket.open();
-  await connecting;
-  return { client, socket };
+/** 生成されたソケットを記録するファクトリ。 */
+function collector(): { sockets: FakeSocket[]; createSocket: () => FakeSocket } {
+  const sockets: FakeSocket[] = [];
+  return {
+    sockets,
+    createSocket: () => {
+      const socket = new FakeSocket();
+      sockets.push(socket);
+      return socket;
+    },
+  };
 }
 
-/** 直近のリクエストの `id` を取り出す。 */
-function lastRequestId(socket: FakeSocket): string {
-  const messages = socket.sentMessages() as { id: string }[];
-  const last = messages[messages.length - 1];
-  if (last === undefined) {
-    throw new Error("リクエストが送信されていません");
-  }
-  return last.id;
+function client(createSocket: () => FakeSocket, requestTimeoutMs = 5_000): HerdrClient {
+  return new HerdrClient({ socketPath: SOCKET_PATH, createSocket, requestTimeoutMs });
 }
 
-describe("HerdrClient.connect", () => {
-  it("渡されたソケットパスで接続する", async () => {
-    const socket = new FakeSocket();
-    const createSocket = vi.fn(() => socket);
-    const client = new HerdrClient({ socketPath: SOCKET_PATH, createSocket });
-
-    const connecting = client.connect();
-    socket.open();
-    await connecting;
-
-    expect(createSocket).toHaveBeenCalledWith(SOCKET_PATH);
-    expect(client.isOpen).toBe(true);
-  });
-
-  it("herdr が起動していない場合は HerdrConnectionError で棄却する", async () => {
-    const socket = new FakeSocket();
-    const client = new HerdrClient({ socketPath: SOCKET_PATH, createSocket: () => socket });
-
-    const connecting = client.connect();
-    socket.fail(new Error("ENOENT"));
-
-    await expect(connecting).rejects.toBeInstanceOf(HerdrConnectionError);
-    expect(client.isOpen).toBe(false);
-  });
-});
+/** 直近のソケットに送られたメッセージ。 */
+function sent(socket: FakeSocket): Record<string, unknown>[] {
+  return socket.sentMessages() as Record<string, unknown>[];
+}
 
 describe("HerdrClient.request", () => {
-  it("id で応答を対応づけ、並行リクエストが混線しない", async () => {
-    const { client, socket } = await connected();
+  it("リクエストごとに接続を開き、応答を受け取ったら閉じる", async () => {
+    const { sockets, createSocket } = collector();
 
-    const first = client.request("session.snapshot");
-    const second = client.request("agent.list");
-    const [firstId, secondId] = (socket.sentMessages() as { id: string }[]).map(
-      (message) => message.id,
-    );
+    const first = client(createSocket).request("agent.focus", { target: "wE:p1" });
+    sockets[0]?.open();
+    await Promise.resolve();
+    sockets[0]?.receiveMessage({ id: sent(sockets[0]!)[0]?.id, result: { type: "ok" } });
 
-    socket.receiveMessage({ id: secondId, result: { agents: [] } });
-    socket.receiveMessage({ id: firstId, result: { snapshot: {} } });
-
-    await expect(first).resolves.toEqual({ snapshot: {} });
-    await expect(second).resolves.toEqual({ agents: [] });
+    await expect(first).resolves.toEqual({ type: "ok" });
+    expect(sockets).toHaveLength(1);
+    expect(sockets[0]?.destroyed).toBe(true);
   });
 
   it("method と params をそのまま送る", async () => {
-    const { client, socket } = await connected();
+    const { sockets, createSocket } = collector();
 
-    void client.request("agent.focus", { target: "wE:p1" });
+    void client(createSocket).request("agent.send_keys", { target: "wE:p1", keys: ["esc"] });
+    sockets[0]?.open();
 
-    expect(socket.sentMessages()[0]).toEqual({
+    expect(sent(sockets[0]!)[0]).toEqual({
       id: expect.any(String),
-      method: "agent.focus",
-      params: { target: "wE:p1" },
+      method: "agent.send_keys",
+      params: { target: "wE:p1", keys: ["esc"] },
     });
+  });
+
+  it("2 回呼ぶと接続も 2 本開く", async () => {
+    const { sockets, createSocket } = collector();
+    const herdr = client(createSocket);
+
+    void herdr.request("ping");
+    void herdr.request("ping");
+
+    expect(sockets).toHaveLength(2);
   });
 
   it("error 応答は code を保った HerdrApiError になる", async () => {
-    const { client, socket } = await connected();
+    const { sockets, createSocket } = collector();
 
-    const request = client.request("agent.focus", { target: "wZ:p9" });
-    socket.receiveMessage({
-      id: lastRequestId(socket),
+    const request = client(createSocket).request("agent.focus", { target: "wZ:p9" });
+    sockets[0]?.open();
+    sockets[0]?.receiveMessage({
+      id: sent(sockets[0]!)[0]?.id,
       error: { code: "agent_not_found", message: "agent target wZ:p9 not found" },
     });
 
-    await expect(request).rejects.toMatchObject({
-      name: "HerdrApiError",
-      code: "agent_not_found",
-    });
     await expect(request).rejects.toBeInstanceOf(HerdrApiError);
+    await expect(request).rejects.toMatchObject({ code: "agent_not_found" });
   });
 
-  it("未接続なら送信せずに棄却する", async () => {
-    const socket = new FakeSocket();
-    const client = new HerdrClient({ socketPath: SOCKET_PATH, createSocket: () => socket });
+  it("応答の前に切断されたら HerdrConnectionError になる", async () => {
+    const { sockets, createSocket } = collector();
 
-    await expect(client.request("ping")).rejects.toBeInstanceOf(HerdrConnectionError);
-    expect(socket.written).toEqual([]);
-  });
-
-  it("切断すると未解決のリクエストが HerdrConnectionError で棄却される", async () => {
-    const { client, socket } = await connected();
-
-    const request = client.request("session.snapshot");
-    socket.fail(new Error("EPIPE"));
+    const request = client(createSocket).request("session.snapshot");
+    sockets[0]?.open();
+    sockets[0]?.fail(new Error("EPIPE"));
 
     await expect(request).rejects.toBeInstanceOf(HerdrConnectionError);
-    expect(client.isOpen).toBe(false);
+  });
+
+  it("herdr が起動していなければ HerdrConnectionError になる", async () => {
+    const request = new HerdrClient({
+      socketPath: SOCKET_PATH,
+      createSocket: () => {
+        throw new Error("ENOENT");
+      },
+    }).request("ping");
+
+    await expect(request).rejects.toBeInstanceOf(HerdrConnectionError);
   });
 });
 
 describe("HerdrClient のメッセージ復元", () => {
-  it("1 つの chunk に複数行が来ても分解する", async () => {
-    const { client, socket } = await connected();
-
-    const first = client.request("ping");
-    const second = client.request("ping");
-    const ids = (socket.sentMessages() as { id: string }[]).map((message) => message.id);
-    socket.receive(
-      `${JSON.stringify({ id: ids[0], result: 1 })}\n${JSON.stringify({ id: ids[1], result: 2 })}\n`,
-    );
-
-    await expect(first).resolves.toBe(1);
-    await expect(second).resolves.toBe(2);
-  });
-
   it("1 行が複数 chunk に分割されても復元する", async () => {
-    const { client, socket } = await connected();
+    const { sockets, createSocket } = collector();
 
-    const request = client.request("ping");
-    const line = JSON.stringify({ id: lastRequestId(socket), result: { type: "pong" } });
-    socket.receive(line.slice(0, 7));
-    socket.receive(line.slice(7));
-    socket.receive("\n");
+    const request = client(createSocket).request("ping");
+    sockets[0]?.open();
+    const line = JSON.stringify({ id: sent(sockets[0]!)[0]?.id, result: { type: "pong" } });
+    sockets[0]?.receive(line.slice(0, 7));
+    sockets[0]?.receive(line.slice(7));
+    sockets[0]?.receive("\n");
 
     await expect(request).resolves.toEqual({ type: "pong" });
   });
 
   it("壊れた行が来ても後続のメッセージを処理できる", async () => {
-    const { client, socket } = await connected();
+    const { sockets, createSocket } = collector();
 
-    const request = client.request("ping");
-    socket.receive("{ これは JSON ではない\n");
-    socket.receiveMessage({ id: lastRequestId(socket), result: "ok" });
+    const request = client(createSocket).request("ping");
+    sockets[0]?.open();
+    sockets[0]?.receive("{ これは JSON ではない\n");
+    sockets[0]?.receiveMessage({ id: sent(sockets[0]!)[0]?.id, result: "ok" });
 
     await expect(request).resolves.toBe("ok");
   });
 });
 
-describe("HerdrClient.subscribe", () => {
-  it("購読の type を配列で送り、以後のイベントを onEvent へ渡す", async () => {
-    const onEvent = vi.fn();
-    const { client, socket } = await connected({ onEvent });
-
-    const subscribing = client.subscribe(["pane.updated", "workspace.closed"]);
+describe("HerdrClient.openEventStream", () => {
+  /** 購読が確立した状態のストリームとソケットを用意する。 */
+  async function subscribed(onEvent = vi.fn(), onClose = vi.fn()) {
+    const { sockets, createSocket } = collector();
+    const opening = client(createSocket).openEventStream(["pane.updated"], { onEvent, onClose });
+    const socket = sockets[0];
+    if (socket === undefined) {
+      throw new Error("ソケットが生成されていません");
+    }
+    socket.open();
+    await Promise.resolve();
     socket.receiveMessage({
-      id: lastRequestId(socket),
+      id: sent(socket)[0]?.id,
       result: { type: "subscription_started" },
     });
-    await subscribing;
+    return { stream: await opening, socket, onEvent, onClose };
+  }
 
-    expect(socket.sentMessages()[0]).toMatchObject({
+  it("購読の type を配列で送り、確立後も接続を保つ", async () => {
+    const { socket } = await subscribed();
+
+    expect(sent(socket)[0]).toMatchObject({
       method: "events.subscribe",
-      params: { subscriptions: [{ type: "pane.updated" }, { type: "workspace.closed" }] },
+      params: { subscriptions: [{ type: "pane.updated" }] },
     });
+    expect(socket.destroyed).toBe(false);
+  });
+
+  it("確立後のイベントを onEvent へ渡す", async () => {
+    const { socket, onEvent } = await subscribed();
 
     socket.receiveMessage({ event: "pane_updated", data: { pane_id: "wE:p1" } });
 
     expect(onEvent).toHaveBeenCalledWith("pane_updated", { pane_id: "wE:p1" });
   });
+
+  it("確立前に切断されたら棄却する", async () => {
+    const { sockets, createSocket } = collector();
+
+    const opening = client(createSocket).openEventStream(["pane.updated"], {
+      onEvent: vi.fn(),
+      onClose: vi.fn(),
+    });
+    sockets[0]?.open();
+    sockets[0]?.fail(new Error("EPIPE"));
+
+    await expect(opening).rejects.toBeInstanceOf(HerdrConnectionError);
+  });
+
+  it("意図しない切断は onClose で通知する", async () => {
+    const { socket, onClose } = await subscribed();
+
+    socket.fail(new Error("EPIPE"));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("自分で close() したときは onClose を呼ばない", async () => {
+    const { stream, socket, onClose } = await subscribed();
+
+    stream.close();
+
+    expect(socket.destroyed).toBe(true);
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });
 
-describe("HerdrClient のタイムアウトと切断通知", () => {
+describe("HerdrClient のタイムアウト", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -194,40 +202,17 @@ describe("HerdrClient のタイムアウトと切断通知", () => {
     vi.useRealTimers();
   });
 
-  it("応答が来なければタイムアウトで棄却する", async () => {
-    const socket = new FakeSocket();
-    const client = new HerdrClient({
-      socketPath: SOCKET_PATH,
-      createSocket: () => socket,
-      requestTimeoutMs: 1_000,
-    });
-    const connecting = client.connect();
-    socket.open();
-    await connecting;
+  it("応答が来なければタイムアウトで棄却し、接続を閉じる", async () => {
+    const { sockets, createSocket } = collector();
 
     // タイマーを進める前に棄却を受け取っておく（未処理の rejection にしないため）。
-    const settled = client.request("session.snapshot").catch((error: unknown) => error);
+    const settled = client(createSocket, 1_000)
+      .request("session.snapshot")
+      .catch((error: unknown) => error);
+    sockets[0]?.open();
     await vi.advanceTimersByTimeAsync(1_000);
 
     await expect(settled).resolves.toBeInstanceOf(HerdrConnectionError);
-  });
-
-  it("意図しない切断は onClose で通知する", async () => {
-    const onClose = vi.fn();
-    const { socket } = await connected({ onClose });
-
-    socket.fail(new Error("EPIPE"));
-
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("自分で close() したときは onClose を呼ばない", async () => {
-    const onClose = vi.fn();
-    const { client, socket } = await connected({ onClose });
-
-    client.close();
-
-    expect(socket.destroyed).toBe(true);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(sockets[0]?.destroyed).toBe(true);
   });
 });

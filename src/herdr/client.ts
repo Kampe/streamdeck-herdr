@@ -1,9 +1,9 @@
 /**
  * herdr ソケット API のクライアント。
  *
- * リクエストと応答を `id` で対応づけ、`error` 応答を型付きの例外に変える。
- * イベントは購読ハンドラへ素通しする。再接続は行わず、切断は `onClose` で
- * 上位（store.ts）へ伝えるだけにとどめる。
+ * herdr は 1 つの応答を返すと接続を閉じる（実測で確認）。よってリクエストは
+ * 1 回ごとに接続を張り直し、イベント購読だけを長寿命の接続として保持する。
+ * 再接続は行わず、購読接続が切れたことは `onClose` で上位（store.ts）へ伝える。
  */
 
 import { REQUEST_TIMEOUT_MS } from "../constants.js";
@@ -20,7 +20,7 @@ export class HerdrApiError extends Error {
   }
 }
 
-/** 接続していない・接続が切れた・応答が来ない。 */
+/** 接続できない・接続が切れた・応答が来ない。 */
 export class HerdrConnectionError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -32,136 +32,147 @@ export type HerdrClientOptions = {
   socketPath: string;
   /** テストでフェイクに差し替えるための注入点。 */
   createSocket?: SocketFactory;
-  /** 購読中に流れてくるイベント。 */
-  onEvent?: (event: string, data: unknown) => void;
-  /** 接続が閉じた。未解決のリクエストはこの前にすべて reject される。 */
-  onClose?: (error: Error | null) => void;
   requestTimeoutMs?: number;
 };
 
-type PendingRequest = {
-  resolve: (result: unknown) => void;
-  reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+export type EventStreamHandlers = {
+  onEvent: (event: string, data: unknown) => void;
+  /** 購読接続が意図せず閉じた。`close()` で閉じた場合は呼ばれない。 */
+  onClose: (error: Error | null) => void;
 };
 
+/** 購読中の接続。 */
+export type HerdrEventStream = {
+  close(): void;
+};
+
+const REQUEST_ID = "sd-request";
+const SUBSCRIBE_ID = "sd-subscribe";
+
 export class HerdrClient {
-  readonly #options: HerdrClientOptions;
+  readonly #socketPath: string;
   readonly #createSocket: SocketFactory;
   readonly #requestTimeoutMs: number;
-  readonly #pending = new Map<string, PendingRequest>();
-  #connection: JsonLineConnection | null = null;
-  #open = false;
-  #closing = false;
-  #nextId = 0;
 
   constructor(options: HerdrClientOptions) {
-    this.#options = options;
+    this.#socketPath = options.socketPath;
     this.#createSocket = options.createSocket ?? createUnixSocket;
     this.#requestTimeoutMs = options.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
   }
 
-  get isOpen(): boolean {
-    return this.#open;
-  }
-
   /**
-   * 接続する。確立したら解決し、確立前に閉じたら `HerdrConnectionError` で棄却する。
-   * herdr が起動していない場合はソケットファイルが無く、`error` 経由でここに来る。
-   */
-  connect(): Promise<void> {
-    this.#closing = false;
-    return new Promise((resolve, reject) => {
-      let settled = false;
-
-      const connection = new JsonLineConnection(this.#createSocket(this.#options.socketPath), {
-        onOpen: () => {
-          this.#open = true;
-          settled = true;
-          resolve();
-        },
-        onMessage: (message) => {
-          if (message.kind === "event") {
-            this.#options.onEvent?.(message.event, message.data);
-            return;
-          }
-          const pending = this.#pending.get(message.id);
-          if (pending === undefined) {
-            return;
-          }
-          this.#pending.delete(message.id);
-          clearTimeout(pending.timer);
-          if (message.kind === "error") {
-            pending.reject(new HerdrApiError(message.code, message.message));
-          } else {
-            pending.resolve(message.result);
-          }
-        },
-        onClose: (error) => {
-          this.#open = false;
-          this.#connection = null;
-          this.#rejectAllPending(error);
-          if (!settled) {
-            settled = true;
-            reject(new HerdrConnectionError("herdr に接続できません", { cause: error ?? undefined }));
-            return;
-          }
-          if (!this.#closing) {
-            this.#options.onClose?.(error);
-          }
-        },
-      });
-
-      this.#connection = connection;
-    });
-  }
-
-  /**
-   * メソッドを呼び、`result` を返す。応答が `error` なら `HerdrApiError` を投げる。
+   * メソッドを 1 回呼ぶ。専用の接続を開き、応答を受け取ったら閉じる。
+   * 応答が `error` なら `HerdrApiError` を投げる。
    */
   request(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
-    const connection = this.#connection;
-    if (connection === null || !this.#open) {
-      return Promise.reject(new HerdrConnectionError("herdr に接続していません"));
-    }
-
-    const id = `sd-${++this.#nextId}`;
     return new Promise<unknown>((resolve, reject) => {
+      let settled = false;
+      let connection: JsonLineConnection | null = null;
+
+      const finish = (action: () => void): void => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        connection?.close();
+        action();
+      };
+
       const timer = setTimeout(() => {
-        this.#pending.delete(id);
-        reject(new HerdrConnectionError(`herdr が ${method} に応答しません`));
+        finish(() => reject(new HerdrConnectionError(`herdr が ${method} に応答しません`)));
       }, this.#requestTimeoutMs);
 
-      this.#pending.set(id, { resolve, reject, timer });
-      connection.send({ id, method, params });
+      try {
+        connection = new JsonLineConnection(this.#createSocket(this.#socketPath), {
+          onOpen: () => connection?.send({ id: REQUEST_ID, method, params }),
+          onMessage: (message) => {
+            if (message.kind === "event" || message.id !== REQUEST_ID) {
+              return;
+            }
+            if (message.kind === "error") {
+              finish(() => reject(new HerdrApiError(message.code, message.message)));
+            } else {
+              finish(() => resolve(message.result));
+            }
+          },
+          onClose: (error) => {
+            finish(() =>
+              reject(
+                new HerdrConnectionError(`herdr が ${method} に応答する前に切断されました`, {
+                  cause: error ?? undefined,
+                }),
+              ),
+            );
+          },
+        });
+      } catch (error) {
+        finish(() =>
+          reject(new HerdrConnectionError("herdr に接続できません", { cause: error })),
+        );
+      }
     });
   }
 
-  /** イベントを購読する。以後、同じ接続に `onEvent` が流れ続ける。 */
-  async subscribe(types: readonly string[]): Promise<void> {
-    await this.request("events.subscribe", {
-      subscriptions: types.map((type) => ({ type })),
+  /**
+   * イベントを購読する。購読が確立したら解決し、以後は同じ接続に
+   * イベントが流れ続ける。確立前に閉じた場合は棄却する。
+   */
+  openEventStream(
+    types: readonly string[],
+    handlers: EventStreamHandlers,
+  ): Promise<HerdrEventStream> {
+    return new Promise<HerdrEventStream>((resolve, reject) => {
+      let opened = false;
+      let closedByUs = false;
+      let connection: JsonLineConnection | null = null;
+
+      const close = (): void => {
+        closedByUs = true;
+        connection?.close();
+      };
+
+      try {
+        connection = new JsonLineConnection(this.#createSocket(this.#socketPath), {
+          onOpen: () =>
+            connection?.send({
+              id: SUBSCRIBE_ID,
+              method: "events.subscribe",
+              params: { subscriptions: types.map((type) => ({ type })) },
+            }),
+          onMessage: (message) => {
+            if (message.kind === "event") {
+              handlers.onEvent(message.event, message.data);
+              return;
+            }
+            if (message.id !== SUBSCRIBE_ID || opened) {
+              return;
+            }
+            if (message.kind === "error") {
+              close();
+              reject(new HerdrApiError(message.code, message.message));
+              return;
+            }
+            opened = true;
+            resolve({ close });
+          },
+          onClose: (error) => {
+            if (!opened) {
+              reject(
+                new HerdrConnectionError("herdr のイベント購読を開始できません", {
+                  cause: error ?? undefined,
+                }),
+              );
+              return;
+            }
+            if (!closedByUs) {
+              handlers.onClose(error);
+            }
+          },
+        });
+      } catch (error) {
+        reject(new HerdrConnectionError("herdr に接続できません", { cause: error }));
+      }
     });
-  }
-
-  /** 接続を閉じる。`onClose` は呼ばれない（意図した切断のため）。 */
-  close(): void {
-    this.#closing = true;
-    const connection = this.#connection;
-    this.#connection = null;
-    this.#open = false;
-    this.#rejectAllPending(null);
-    connection?.close();
-  }
-
-  #rejectAllPending(cause: Error | null): void {
-    const pending = [...this.#pending.values()];
-    this.#pending.clear();
-    for (const request of pending) {
-      clearTimeout(request.timer);
-      request.reject(
-        new HerdrConnectionError("herdr との接続が切れました", { cause: cause ?? undefined }),
-      );
-    }
   }
 }
