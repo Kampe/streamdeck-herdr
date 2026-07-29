@@ -1,0 +1,91 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "herdr",
+  "Author": "yuntan",
+  "Description": "herdr のエージェントの状態を表示し、フォーカス・承認/拒否・中断・プロンプト投入を Stream Deck から行います。",
+  "Icon": "imgs/plugin-icon",
+  "UUID": "com.github.yuntan.herdr",
+  "Version": "0.1.0.0",
+  "SDKVersion": 2,
+  "CodePath": "bin/plugin.js",
+  "Category": "herdr",
+  "CategoryIcon": "imgs/category-icon",
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    }
+  ],
+  "Software": {
+    "MinimumVersion": "6.4"
+  },
+  "Nodejs": {
+    "Version": "20"
+  },
+  "Actions": [
+    {
+      "Name": "エージェント",
+      "UUID": "com.github.yuntan.herdr.agent-slot",
+      "Icon": "imgs/actions/agent-slot",
+      "Tooltip": "herdr のエージェント 1 つの状態を表示し、押すとフォーカスします。",
+      "PropertyInspectorPath": "ui/agent-slot.html",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "imgs/keys/agent-slot",
+          "TitleAlignment": "bottom",
+          "FontSize": 9
+        }
+      ]
+    },
+    {
+      "Name": "キー送信",
+      "UUID": "com.github.yuntan.herdr.send-keys",
+      "Icon": "imgs/actions/send-keys",
+      "Tooltip": "対象エージェントにキー列（承認・拒否など）を送ります。",
+      "PropertyInspectorPath": "ui/send-keys.html",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "imgs/keys/send-keys",
+          "TitleAlignment": "bottom",
+          "FontSize": 9
+        }
+      ]
+    },
+    {
+      "Name": "プロンプト送信",
+      "UUID": "com.github.yuntan.herdr.prompt",
+      "Icon": "imgs/actions/prompt",
+      "Tooltip": "対象エージェントに定型プロンプトを投入します。",
+      "PropertyInspectorPath": "ui/prompt.html",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "imgs/keys/prompt",
+          "TitleAlignment": "bottom",
+          "FontSize": 9
+        }
+      ]
+    },
+    {
+      "Name": "中断",
+      "UUID": "com.github.yuntan.herdr.interrupt",
+      "Icon": "imgs/actions/interrupt",
+      "Tooltip": "対象エージェントに Esc を送って実行を中断します。",
+      "PropertyInspectorPath": "ui/interrupt.html",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "imgs/keys/interrupt",
+          "TitleAlignment": "bottom",
+          "FontSize": 9
+        }
+      ]
+    }
+  ]
+}

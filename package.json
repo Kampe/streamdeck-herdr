@@ -1,0 +1,27 @@
+{
+  "name": "streamdeck-herdr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate": "streamdeck validate com.github.yuntan.herdr.sdPlugin"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "2.1.0"
+  },
+  "devDependencies": {
+    "@elgato/cli": "1.7.4",
+    "@elgato/schemas": "0.4.15",
+    "@rollup/plugin-commonjs": "28.0.9",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "@rollup/plugin-typescript": "12.3.0",
+    "@types/node": "24.13.3",
+    "rollup": "4.62.3",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}
