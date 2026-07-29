@@ -36,6 +36,7 @@ export class HerdrStore {
   readonly #reconnectIntervalMs: number;
   readonly #refreshDebounceMs: number;
   readonly #listeners = new Set<HerdrStateListener>();
+  #socketPath: string;
   #client: HerdrClient | null = null;
   #state: HerdrState = { status: "offline", reason: "herdr に接続していません" };
   #refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -44,6 +45,7 @@ export class HerdrStore {
 
   constructor(options: HerdrStoreOptions) {
     this.#options = options;
+    this.#socketPath = options.socketPath;
     this.#reconnectIntervalMs = options.reconnectIntervalMs ?? RECONNECT_INTERVAL_MS;
     this.#refreshDebounceMs = options.refreshDebounceMs ?? SNAPSHOT_DEBOUNCE_MS;
   }
@@ -81,6 +83,21 @@ export class HerdrStore {
     void this.#connect();
   }
 
+  /**
+   * 接続先を差し替える。設定が変わったときだけ繋ぎ直す。
+   * アクションは 1 度しか登録できないため、ストア自体は作り直さない。
+   */
+  setSocketPath(socketPath: string): void {
+    if (socketPath === this.#socketPath) {
+      return;
+    }
+    this.#socketPath = socketPath;
+    if (this.#running) {
+      this.stop();
+      this.start();
+    }
+  }
+
   /** 接続を止め、タイマーをすべて解除する。 */
   stop(): void {
     this.#running = false;
@@ -104,7 +121,7 @@ export class HerdrStore {
 
   async #connect(): Promise<void> {
     const client = new HerdrClient({
-      socketPath: this.#options.socketPath,
+      socketPath: this.#socketPath,
       createSocket: this.#options.createSocket,
       onEvent: () => this.#scheduleRefresh(),
       onClose: (error) => this.#handleClose(error),

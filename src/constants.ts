@@ -82,3 +82,6 @@ export const KEY_IMAGE_SIZE = 144;
 
 /** キー画像に描くラベルの最大文字数。超えた分は省略記号にする。 */
 export const KEY_LABEL_MAX_LENGTH = 10;
+
+/** キーのタイトル（下端に重なる文字列）の最大文字数。 */
+export const KEY_TITLE_MAX_LENGTH = 12;
