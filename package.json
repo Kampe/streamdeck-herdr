@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
+    "build:profile": "node scripts/build-profile.mjs",
     "watch": "rollup -c -w",
     "test": "vitest run",
     "test:watch": "vitest",

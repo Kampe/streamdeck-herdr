@@ -22,6 +22,14 @@
   "Nodejs": {
     "Version": "20"
   },
+  "Profiles": [
+    {
+      "Name": "profiles/herdr-neo",
+      "DeviceType": 9,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true
+    }
+  ],
   "Actions": [
     {
       "Name": "エージェント",
