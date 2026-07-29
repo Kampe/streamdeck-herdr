@@ -1,7 +1,7 @@
 /**
  * エージェントキーの画像を組み立てる純関数。
  *
- * 状態を色で示し、中央にエージェント種別、右上にスロット番号を描く
+ * 状態を色で示し、中央にエージェント種別のグリフ、右上にスロット番号を描く
  * （spec/herdr-control.md 5.4）。キーのタイトル（ワークスペース名）は
  * Stream Deck 側が下端に重ねるため、下 1/4 は空けておく。
  */
@@ -10,13 +10,13 @@ import {
   EMPTY_SLOT_COLOR,
   EMPTY_SLOT_FOREGROUND_COLOR,
   KEY_IMAGE_SIZE,
-  KEY_LABEL_MAX_LENGTH,
   OFFLINE_COLOR,
   OFFLINE_FOREGROUND_COLOR,
   STATUS_COLORS,
   STATUS_FOREGROUND_COLORS,
 } from "../constants.js";
 import type { AgentStatus } from "../herdr/types.js";
+import { agentGlyph, GLYPH_BOX } from "./agent-glyph.js";
 
 export type AgentKeyView =
   /** herdr に接続できていない。 */
@@ -25,6 +25,10 @@ export type AgentKeyView =
   | { kind: "empty"; slot?: number }
   /** エージェントがいる。 */
   | { kind: "agent"; status: AgentStatus; agent: string | null; slot?: number };
+
+/** グリフを描く領域の一辺（px）。タイトルに重ならないよう上寄せに置く。 */
+const GLYPH_SIZE = 62;
+const GLYPH_CENTER_Y = 58;
 
 /** キー画像を `data:` URI として返す。Stream Deck の `setImage()` にそのまま渡せる。 */
 export function renderAgentKey(view: AgentKeyView): string {
@@ -39,13 +43,13 @@ function buildSvg(view: AgentKeyView): string {
   ];
 
   if (view.kind === "offline") {
-    parts.push(centerText("×", OFFLINE_FOREGROUND_COLOR, 56));
+    parts.push(symbol("×", OFFLINE_FOREGROUND_COLOR, 56));
   } else if (view.kind === "empty") {
-    parts.push(centerText("—", EMPTY_SLOT_FOREGROUND_COLOR, 40));
+    parts.push(symbol("—", EMPTY_SLOT_FOREGROUND_COLOR, 40));
     parts.push(slotBadge(view.slot, EMPTY_SLOT_FOREGROUND_COLOR));
   } else {
     const foreground = STATUS_FOREGROUND_COLORS[view.status];
-    parts.push(centerText(agentLabel(view.agent), foreground, 24));
+    parts.push(glyph(view.agent, foreground));
     parts.push(slotBadge(view.slot, foreground));
   }
 
@@ -72,9 +76,17 @@ function background(view: AgentKeyView): string {
   return `${rect}<rect x="6" y="6" width="${size - 12}" height="${size - 12}" rx="14" fill="none" stroke="${stroke}" stroke-width="3" stroke-dasharray="10 8"/>`;
 }
 
-/** 中央よりやや上に描く。下端は Stream Deck のタイトルに譲る。 */
-function centerText(text: string, fill: string, fontSize: number): string {
-  return `<text x="${KEY_IMAGE_SIZE / 2}" y="58" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica, Arial, sans-serif" font-size="${fontSize}" font-weight="600" fill="${fill}">${escapeXml(text)}</text>`;
+/** エージェント種別のグリフを、下端のタイトルに重ならない位置へ拡大して置く。 */
+function glyph(agent: string | null, color: string): string {
+  const scale = GLYPH_SIZE / GLYPH_BOX;
+  const offsetX = KEY_IMAGE_SIZE / 2 - GLYPH_SIZE / 2;
+  const offsetY = GLYPH_CENTER_Y - GLYPH_SIZE / 2;
+  return `<g transform="translate(${offsetX} ${offsetY}) scale(${scale})">${agentGlyph(agent, color)}</g>`;
+}
+
+/** 空スロット・オフラインを示す記号。 */
+function symbol(text: string, fill: string, fontSize: number): string {
+  return `<text x="${KEY_IMAGE_SIZE / 2}" y="${GLYPH_CENTER_Y}" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica, Arial, sans-serif" font-size="${fontSize}" font-weight="600" fill="${fill}">${text}</text>`;
 }
 
 /** 右上のスロット番号。`index` 指定でないキーには出さない。 */
@@ -82,28 +94,7 @@ function slotBadge(slot: number | undefined, fill: string): string {
   if (slot === undefined) {
     return "";
   }
-  return `<text x="${KEY_IMAGE_SIZE - 14}" y="26" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="${fill}" fill-opacity="0.65">${escapeXml(String(slot))}</text>`;
-}
-
-/** エージェント種別を大文字で描く。未検出なら疑問符。 */
-function agentLabel(agent: string | null): string {
-  if (agent === null || agent === "") {
-    return "?";
-  }
-  return truncate(agent.toUpperCase(), KEY_LABEL_MAX_LENGTH);
-}
-
-function truncate(text: string, maxLength: number): string {
-  return [...text].length <= maxLength ? text : `${[...text].slice(0, maxLength - 1).join("")}…`;
-}
-
-function escapeXml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
+  return `<text x="${KEY_IMAGE_SIZE - 14}" y="26" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="${fill}" fill-opacity="0.65">${slot}</text>`;
 }
 
 function toDataUri(svg: string): string {

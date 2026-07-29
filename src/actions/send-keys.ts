@@ -18,6 +18,15 @@ const PRESET_LABELS: Record<KeyPreset, string> = {
   custom: "キー送信",
 };
 
+/** プリセットごとのキー画像。何を送るキーなのか一目で分かるようにする。 */
+const PRESET_IMAGES: Record<KeyPreset, string> = {
+  approve: "imgs/keys/send-approve",
+  reject: "imgs/keys/send-reject",
+  yes: "imgs/keys/send-yes",
+  no: "imgs/keys/send-no",
+  custom: "imgs/keys/send-custom",
+};
+
 @action({ UUID: ACTION_UUID_SEND_KEYS })
 export class SendKeys extends TargetAction<SendKeysSettings> {
   protected override defaultLabel(): string {
@@ -26,6 +35,10 @@ export class SendKeys extends TargetAction<SendKeysSettings> {
 
   protected override label(settings: SendKeysSettings): string {
     return settings.label ?? PRESET_LABELS[settings.preset ?? "approve"];
+  }
+
+  protected override image(settings: SendKeysSettings): string {
+    return PRESET_IMAGES[settings.preset ?? "approve"];
   }
 
   protected override async perform(target: string, settings: SendKeysSettings): Promise<void> {

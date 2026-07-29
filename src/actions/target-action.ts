@@ -37,12 +37,28 @@ export abstract class TargetAction<T extends TargetSettings> extends SingletonAc
     return settings.label ?? this.defaultLabel();
   }
 
+  /**
+   * 設定に応じて差し替えるキー画像（プラグインフォルダ内のパス）。
+   * `undefined` を返した場合は manifest の既定画像のまま。
+   */
+  protected image(_settings: T): string | undefined {
+    return undefined;
+  }
+
   override onWillAppear(ev: WillAppearEvent<T>): void {
-    void ev.action.setTitle(this.label(ev.payload.settings));
+    this.#apply(ev.action, ev.payload.settings);
   }
 
   override onDidReceiveSettings(ev: DidReceiveSettingsEvent<T>): void {
-    void ev.action.setTitle(this.label(ev.payload.settings));
+    this.#apply(ev.action, ev.payload.settings);
+  }
+
+  #apply(action: WillAppearEvent<T>["action"], settings: T): void {
+    void action.setTitle(this.label(settings));
+    const image = this.image(settings);
+    if (image !== undefined && action.isKey()) {
+      void action.setImage(image);
+    }
   }
 
   override async onKeyDown(ev: KeyDownEvent<T>): Promise<void> {

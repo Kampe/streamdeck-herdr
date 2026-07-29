@@ -4,6 +4,7 @@ import {
   EMPTY_SLOT_COLOR,
   OFFLINE_FOREGROUND_COLOR,
   STATUS_COLORS,
+  STATUS_FOREGROUND_COLORS,
 } from "../constants.js";
 import { renderAgentKey, type AgentKeyView } from "./key-image.js";
 
@@ -32,8 +33,12 @@ describe("renderAgentKey", () => {
     }
   });
 
-  it("エージェント種別を大文字で描く", () => {
-    expect(render({ kind: "agent", status: "idle", agent: "claude" })).toContain(">CLAUDE<");
+  it("エージェント種別のグリフを埋め込む", () => {
+    const claude = render({ kind: "agent", status: "idle", agent: "claude" });
+    const codex = render({ kind: "agent", status: "idle", agent: "codex" });
+
+    expect(claude).toContain("<g transform=");
+    expect(claude).not.toEqual(codex);
   });
 
   it("種別が検出できていなければ疑問符を描く", () => {
@@ -62,16 +67,11 @@ describe("renderAgentKey", () => {
     expect(offline).not.toEqual(empty);
   });
 
-  it("XML の特殊文字をエスケープする", () => {
-    const svg = render({ kind: "agent", status: "idle", agent: "a&b<c>\"d'" });
+  it("状態ごとに前景色を変える", () => {
+    const idle = render({ kind: "agent", status: "idle", agent: "claude" });
+    const working = render({ kind: "agent", status: "working", agent: "claude" });
 
-    expect(svg).toContain("A&amp;B&lt;C&gt;&quot;D&apos;");
-    expect(svg).not.toContain("<c>");
-  });
-
-  it("長すぎる種別名は省略記号付きで切り詰める", () => {
-    const svg = render({ kind: "agent", status: "idle", agent: "abcdefghijklmn" });
-
-    expect(svg).toContain(">ABCDEFGHI…<");
+    expect(idle).toContain(STATUS_FOREGROUND_COLORS.idle);
+    expect(working).toContain(STATUS_FOREGROUND_COLORS.working);
   });
 });

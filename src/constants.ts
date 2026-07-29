@@ -60,19 +60,19 @@ export const SUBSCRIPTION_TYPES: readonly string[] = [
 
 /** 状態ごとのキー背景色（spec/herdr-control.md 5.4「表示」）。 */
 export const STATUS_COLORS: Record<AgentStatus, string> = {
-  idle: "#e8ecf2",
-  working: "#2f7bd6",
-  blocked: "#d99024",
-  done: "#2f9e5f",
+  idle: "#0d0f13",
+  working: "#f08c00",
+  blocked: "#e03131",
+  done: "#6fd3f2",
   unknown: "#3a3f47",
 };
 
 /** 状態ごとの前景色（背景とのコントラストを確保する）。 */
 export const STATUS_FOREGROUND_COLORS: Record<AgentStatus, string> = {
-  idle: "#1c1f26",
-  working: "#ffffff",
-  blocked: "#1c1f26",
-  done: "#ffffff",
+  idle: "#e8ecf2",
+  working: "#1c1f26",
+  blocked: "#ffffff",
+  done: "#10222b",
   unknown: "#9aa1ad",
 };
 
@@ -86,9 +86,6 @@ export const OFFLINE_FOREGROUND_COLOR = "#b04a4a";
 
 /** キー画像の一辺（px）。Stream Deck のキーは正方形。 */
 export const KEY_IMAGE_SIZE = 144;
-
-/** キー画像に描くラベルの最大文字数。超えた分は省略記号にする。 */
-export const KEY_LABEL_MAX_LENGTH = 10;
 
 /** キーのタイトル（下端に重なる文字列）の最大文字数。 */
 export const KEY_TITLE_MAX_LENGTH = 12;
