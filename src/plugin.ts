@@ -7,6 +7,9 @@
 import streamDeck from "@elgato/streamdeck";
 
 import { AgentSlot } from "./actions/agent-slot.js";
+import { Interrupt } from "./actions/interrupt.js";
+import { Prompt } from "./actions/prompt.js";
+import { SendKeys } from "./actions/send-keys.js";
 import { DEFAULT_SOCKET_PATH } from "./constants.js";
 import { HerdrStore } from "./herdr/store.js";
 import type { GlobalSettings } from "./settings.js";
@@ -17,7 +20,9 @@ const store = new HerdrStore({
 });
 
 streamDeck.actions.registerAction(new AgentSlot(store));
-// TODO(T10): register SendKeys / Prompt / Interrupt actions
+streamDeck.actions.registerAction(new SendKeys(store));
+streamDeck.actions.registerAction(new Prompt(store));
+streamDeck.actions.registerAction(new Interrupt(store));
 
 await streamDeck.connect();
 
