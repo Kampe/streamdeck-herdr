@@ -204,6 +204,7 @@ herdr が検出する種別は 19 種類あり、全部に絵を用意しても�
 | `codex` | Codex の公式ロゴ | lobe-icons（MIT） |
 | `gemini` | Google Gemini の公式ロゴ | simple-icons（CC0-1.0） |
 | `cursor` | Cursor の公式ロゴ | simple-icons（CC0-1.0） |
+| `opencode` | OpenCode の公式ロゴ | simple-icons（CC0-1.0） |
 | その他 | 頭 2 文字の字面。種別が検出できていなければ `?` | — |
 
 商標は各社に帰属する。ロゴは形を変えず、色だけ状態色に合わせる。

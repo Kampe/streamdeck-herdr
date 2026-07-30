@@ -4,7 +4,7 @@ import { agentGlyph } from "./agent-glyph.js";
 
 describe("agentGlyph", () => {
   it("ロゴを用意した種別は種別ごとに違うグリフを返す", () => {
-    const glyphs = ["claude", "codex", "gemini", "cursor"].map((agent) =>
+    const glyphs = ["claude", "codex", "gemini", "cursor", "opencode"].map((agent) =>
       agentGlyph(agent, "#fff"),
     );
 
@@ -21,7 +21,7 @@ describe("agentGlyph", () => {
   });
 
   it("ロゴを用意していない種別は頭 2 文字を大文字で描く", () => {
-    expect(agentGlyph("opencode", "#fff")).toContain(">OP<");
+    expect(agentGlyph("aider", "#fff")).toContain(">AI<");
     expect(agentGlyph("cline", "#fff")).toContain(">CL<");
   });
 
@@ -32,7 +32,7 @@ describe("agentGlyph", () => {
 
   it("渡した色を使う", () => {
     expect(agentGlyph("claude", "#123456")).toContain("#123456");
-    expect(agentGlyph("opencode", "#123456")).toContain("#123456");
+    expect(agentGlyph("aider", "#123456")).toContain("#123456");
   });
 
   it("種別名の XML 特殊文字をエスケープする", () => {
