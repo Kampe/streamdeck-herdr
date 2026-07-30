@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { agentGlyph } from "./agent-glyph.js";
 
 describe("agentGlyph", () => {
-  it("形を用意した種別は種別ごとに違うグリフを返す", () => {
+  it("ロゴを用意した種別は種別ごとに違うグリフを返す", () => {
     const glyphs = ["claude", "codex", "gemini", "cursor"].map((agent) =>
       agentGlyph(agent, "#fff"),
     );
@@ -11,11 +11,16 @@ describe("agentGlyph", () => {
     expect(new Set(glyphs).size).toBe(glyphs.length);
   });
 
-  it("大文字小文字を区別せずに形を引く", () => {
+  it("大文字小文字を区別せずにロゴを引く", () => {
     expect(agentGlyph("CLAUDE", "#fff")).toBe(agentGlyph("claude", "#fff"));
   });
 
-  it("形を用意していない種別は頭 2 文字を大文字で描く", () => {
+  it("穴あきのロゴは evenodd で塗る", () => {
+    expect(agentGlyph("codex", "#fff")).toContain('fill-rule="evenodd"');
+    expect(agentGlyph("claude", "#fff")).not.toContain("fill-rule");
+  });
+
+  it("ロゴを用意していない種別は頭 2 文字を大文字で描く", () => {
     expect(agentGlyph("opencode", "#fff")).toContain(">OP<");
     expect(agentGlyph("cline", "#fff")).toContain(">CL<");
   });

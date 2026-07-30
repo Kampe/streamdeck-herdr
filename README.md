@@ -31,7 +31,7 @@ herdr が起動していないときは全キーがオフライン表示にな�
 | 空スロット | 破線枠 + `—` | 対応するエージェントがいない |
 | オフライン | 赤い破線枠 + `×` | herdr に接続できていない |
 
-キーの中央にはエージェント種別のグリフが出る。`claude` は 8 方向の光条、`codex` は花形、`gemini` は 4 方向の星、`cursor` は矢印カーソル。それ以外の種別は頭 2 文字の字面（`opencode` なら `OP`）。
+キーの中央にはエージェント種別のグリフが出る。`claude` / `codex` / `gemini` / `cursor` は各社の公式ロゴマークを状態色で塗ったもの（パスの出所は [simple-icons](https://github.com/simple-icons/simple-icons)（CC0-1.0）と [lobe-icons](https://github.com/lobehub/lobe-icons)（MIT）、商標は各社に帰属）。それ以外の種別は頭 2 文字の字面（`opencode` なら `OP`）。
 
 「キー送信」はプリセットに応じてアイコンが変わる（承認 = チェック、拒否 = バツ、はい = `Y`、いいえ = `N`、中断 = 停止マーク、自由入力 = キーキャップ）。
 
