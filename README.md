@@ -4,6 +4,10 @@
 
 操作モデルは OpenAI の Codex Micro に倣っている。対象は macOS + Stream Deck Neo（8 キー）。
 
+![Stream Deck Neo で herdr のエージェントを操作している様子](docs/streamdeck-neo.jpg)
+
+上段の 4 キーがエージェントで、キーの中央に種別のグリフ（左 2 つが `claude`、3 つ目が `codex`、4 つ目が `opencode`）、下にワークスペース名が出る。
+
 ## 必要なもの
 
 - macOS 12 以降、Stream Deck ソフトウェア 6.4 以降
