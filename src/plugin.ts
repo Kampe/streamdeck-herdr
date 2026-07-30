@@ -12,7 +12,6 @@ import {
   isAgentDataSourceRequest,
 } from "./actions/agent-datasource.js";
 import { AgentSlot } from "./actions/agent-slot.js";
-import { Interrupt } from "./actions/interrupt.js";
 import { Prompt } from "./actions/prompt.js";
 import { SendKeys } from "./actions/send-keys.js";
 import { DEFAULT_SOCKET_PATH } from "./constants.js";
@@ -28,7 +27,6 @@ const store = new HerdrStore({
 streamDeck.actions.registerAction(new AgentSlot(store));
 streamDeck.actions.registerAction(new SendKeys(store));
 streamDeck.actions.registerAction(new Prompt(store));
-streamDeck.actions.registerAction(new Interrupt(store));
 
 await streamDeck.connect();
 

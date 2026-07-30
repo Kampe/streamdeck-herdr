@@ -10,6 +10,11 @@ describe("resolveKeys", () => {
     expect(resolveKeys("no", undefined)).toEqual(["n", "Enter"]);
   });
 
+  it("中断は拒否と同じ Esc を送る（ラベルとアイコンだけが違う）", () => {
+    expect(resolveKeys("interrupt", undefined)).toEqual(["esc"]);
+    expect(resolveKeys("interrupt", undefined)).toEqual(resolveKeys("reject", undefined));
+  });
+
   it("プリセット未設定なら approve を使う", () => {
     expect(resolveKeys(undefined, undefined)).toEqual(["Enter"]);
   });

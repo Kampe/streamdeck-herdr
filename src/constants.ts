@@ -15,7 +15,6 @@ export const PLUGIN_UUID = "com.github.yuntan.herdr";
 export const ACTION_UUID_AGENT_SLOT = `${PLUGIN_UUID}.agent-slot`;
 export const ACTION_UUID_SEND_KEYS = `${PLUGIN_UUID}.send-keys`;
 export const ACTION_UUID_PROMPT = `${PLUGIN_UUID}.prompt`;
-export const ACTION_UUID_INTERRUPT = `${PLUGIN_UUID}.interrupt`;
 
 /**
  * 既定のソケットパス。Stream Deck のプラグインプロセスは herdr の環境変数を

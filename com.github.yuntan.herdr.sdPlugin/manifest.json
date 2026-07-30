@@ -51,7 +51,7 @@
       "Name": "キー送信",
       "UUID": "com.github.yuntan.herdr.send-keys",
       "Icon": "imgs/actions/send-keys",
-      "Tooltip": "対象エージェントにキー列（承認・拒否など）を送ります。",
+      "Tooltip": "対象エージェントにキー列（承認・拒否・中断など）を送ります。",
       "PropertyInspectorPath": "ui/send-keys.html",
       "Controllers": ["Keypad"],
       "DisableAutomaticStates": true,
@@ -74,22 +74,6 @@
       "States": [
         {
           "Image": "imgs/keys/prompt",
-          "TitleAlignment": "bottom",
-          "FontSize": 9
-        }
-      ]
-    },
-    {
-      "Name": "中断",
-      "UUID": "com.github.yuntan.herdr.interrupt",
-      "Icon": "imgs/actions/interrupt",
-      "Tooltip": "対象エージェントに Esc を送って実行を中断します。",
-      "PropertyInspectorPath": "ui/interrupt.html",
-      "Controllers": ["Keypad"],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "imgs/keys/interrupt",
           "TitleAlignment": "bottom",
           "FontSize": 9
         }

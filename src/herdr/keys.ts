@@ -11,12 +11,19 @@ import type { KeyPreset } from "../settings.js";
 /** Escape の正規名。herdr は `escape` も受け付けるが送信は `esc` に揃える。 */
 const ESCAPE_KEY = "esc";
 
-/** プリセットごとに送るキー列。 */
+/**
+ * プリセットごとに送るキー列。
+ *
+ * `reject` と `interrupt` はどちらも Esc を送る。送るキーは同じでも、
+ * 承認プロンプトを取り消すのか、走っている処理を止めるのかで押す動機が違うため、
+ * ラベルとアイコンを分けて両方置いてある。
+ */
 export const KEY_PRESETS: Record<Exclude<KeyPreset, "custom">, readonly string[]> = {
   approve: ["Enter"],
   reject: [ESCAPE_KEY],
   yes: ["y", "Enter"],
   no: ["n", "Enter"],
+  interrupt: [ESCAPE_KEY],
 };
 
 /**

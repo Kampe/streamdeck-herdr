@@ -15,6 +15,7 @@ const PRESET_LABELS: Record<KeyPreset, string> = {
   reject: "拒否",
   yes: "はい",
   no: "いいえ",
+  interrupt: "中断",
   custom: "キー送信",
 };
 
@@ -24,6 +25,7 @@ const PRESET_IMAGES: Record<KeyPreset, string> = {
   reject: "imgs/keys/send-reject",
   yes: "imgs/keys/send-yes",
   no: "imgs/keys/send-no",
+  interrupt: "imgs/keys/interrupt",
   custom: "imgs/keys/send-custom",
 };
 

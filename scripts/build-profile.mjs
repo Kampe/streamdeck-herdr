@@ -35,7 +35,7 @@ const KEYS = [
   ["3,0", "agent-slot", "エージェント", { binding: "index", index: 4 }],
   ["0,1", "send-keys", "キー送信", { binding: "focused", preset: "approve" }],
   ["1,1", "send-keys", "キー送信", { binding: "focused", preset: "reject" }],
-  ["2,1", "interrupt", "中断", { binding: "focused" }],
+  ["2,1", "send-keys", "キー送信", { binding: "focused", preset: "interrupt" }],
   ["3,1", "prompt", "プロンプト送信", { binding: "focused", text: "" }],
 ];
 

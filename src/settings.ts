@@ -10,7 +10,7 @@
 export type TargetBinding = "focused" | "index" | "session";
 
 /** `send-keys` に用意したキープリセット。 */
-export type KeyPreset = "approve" | "reject" | "yes" | "no" | "custom";
+export type KeyPreset = "approve" | "reject" | "yes" | "no" | "interrupt" | "custom";
 
 /** `agent-slot` のラベルに何を出すか。 */
 export type LabelSource = "workspace" | "title" | "custom";
