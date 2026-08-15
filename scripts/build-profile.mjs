@@ -78,12 +78,12 @@ const PROFILES = [
 function state() {
   return {
     FFamily: "",
-    FSize: "9",
+    FSize: "12",
     FStyle: "",
     FUnderline: "off",
     Image: "",
     Title: "",
-    TitleAlignment: "bottom",
+    TitleAlignment: "top",
     TitleColor: "#ffffff",
     TitleShow: "",
   };

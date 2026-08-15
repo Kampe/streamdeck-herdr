@@ -48,8 +48,8 @@
       "States": [
         {
           "Image": "imgs/keys/agent-slot",
-          "TitleAlignment": "bottom",
-          "FontSize": 9
+          "TitleAlignment": "top",
+          "FontSize": 12
         }
       ]
     },
@@ -64,8 +64,8 @@
       "States": [
         {
           "Image": "imgs/keys/send-keys",
-          "TitleAlignment": "bottom",
-          "FontSize": 9
+          "TitleAlignment": "top",
+          "FontSize": 12
         }
       ]
     },
@@ -80,8 +80,8 @@
       "States": [
         {
           "Image": "imgs/keys/prompt",
-          "TitleAlignment": "bottom",
-          "FontSize": 9
+          "TitleAlignment": "top",
+          "FontSize": 12
         }
       ]
     },
@@ -91,7 +91,7 @@
       "Icon": "imgs/keys/page-previous",
       "Tooltip": "Show the previous page of live Herdr agents.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/keys/page-previous", "TitleAlignment": "bottom", "FontSize": 9 }]
+      "States": [{ "Image": "imgs/keys/page-previous", "TitleAlignment": "top", "FontSize": 12 }]
     },
     {
       "Name": "Next Agent Page",
@@ -99,7 +99,7 @@
       "Icon": "imgs/keys/page-next",
       "Tooltip": "Tap for the next agent page; hold for the previous page.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/keys/page-next", "TitleAlignment": "bottom", "FontSize": 9 }]
+      "States": [{ "Image": "imgs/keys/page-next", "TitleAlignment": "top", "FontSize": 12 }]
     },
     {
       "Name": "Split Pane",
@@ -107,7 +107,7 @@
       "Icon": "imgs/keys/pane-split",
       "Tooltip": "Tap to split right; hold to split down.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/keys/pane-split", "TitleAlignment": "bottom", "FontSize": 9 }]
+      "States": [{ "Image": "imgs/keys/pane-split", "TitleAlignment": "top", "FontSize": 12 }]
     },
     {
       "Name": "Swap Pane",
@@ -115,7 +115,7 @@
       "Icon": "imgs/keys/pane-swap",
       "Tooltip": "Tap to swap right; hold to swap down.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/keys/pane-swap", "TitleAlignment": "bottom", "FontSize": 9 }]
+      "States": [{ "Image": "imgs/keys/pane-swap", "TitleAlignment": "top", "FontSize": 12 }]
     },
     {
       "Name": "Close Pane",
@@ -123,7 +123,7 @@
       "Icon": "imgs/keys/pane-close",
       "Tooltip": "Hold to close the focused pane.",
       "Controllers": ["Keypad"],
-      "States": [{ "Image": "imgs/keys/pane-close", "TitleAlignment": "bottom", "FontSize": 9 }]
+      "States": [{ "Image": "imgs/keys/pane-close", "TitleAlignment": "top", "FontSize": 12 }]
     }
   ]
 }

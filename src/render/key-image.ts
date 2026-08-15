@@ -3,7 +3,7 @@
  *
  * 状態を色で示し、中央にエージェント種別のグリフ、右上にスロット番号を描く
  * （spec/herdr-control.md 5.4）。キーのタイトル（ワークスペース名）は
- * Stream Deck 側が下端に重ねるため、下 1/4 は空けておく。
+ * Stream Deck 側が上端に重ねるため、上 1/4 は空けておく。
  */
 
 import {
@@ -26,9 +26,9 @@ export type AgentKeyView =
   /** エージェントがいる。 */
   | { kind: "agent"; status: AgentStatus; agent: string | null; slot?: number };
 
-/** グリフを描く領域の一辺（px）。タイトルに重ならないよう上寄せに置く。 */
+/** グリフを描く領域の一辺（px）。上端のタイトルに重ならないよう下寄せに置く。 */
 const GLYPH_SIZE = 62;
-const GLYPH_CENTER_Y = 58;
+const GLYPH_CENTER_Y = 88;
 
 /** キー画像を `data:` URI として返す。Stream Deck の `setImage()` にそのまま渡せる。 */
 export function renderAgentKey(view: AgentKeyView): string {
@@ -76,7 +76,7 @@ function background(view: AgentKeyView): string {
   return `${rect}<rect x="6" y="6" width="${size - 12}" height="${size - 12}" rx="14" fill="none" stroke="${stroke}" stroke-width="3" stroke-dasharray="10 8"/>`;
 }
 
-/** エージェント種別のグリフを、下端のタイトルに重ならない位置へ拡大して置く。 */
+/** エージェント種別のグリフを、上端のタイトルに重ならない位置へ拡大して置く。 */
 function glyph(agent: string | null, color: string): string {
   const scale = GLYPH_SIZE / GLYPH_BOX;
   const offsetX = KEY_IMAGE_SIZE / 2 - GLYPH_SIZE / 2;
@@ -89,12 +89,12 @@ function symbol(text: string, fill: string, fontSize: number): string {
   return `<text x="${KEY_IMAGE_SIZE / 2}" y="${GLYPH_CENTER_Y}" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica, Arial, sans-serif" font-size="${fontSize}" font-weight="600" fill="${fill}">${text}</text>`;
 }
 
-/** 右上のスロット番号。`index` 指定でないキーには出さない。 */
+/** 右下のスロット番号。`index` 指定でないキーには出さない。 */
 function slotBadge(slot: number | undefined, fill: string): string {
   if (slot === undefined) {
     return "";
   }
-  return `<text x="${KEY_IMAGE_SIZE - 14}" y="26" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="${fill}" fill-opacity="0.65">${slot}</text>`;
+  return `<text x="${KEY_IMAGE_SIZE - 14}" y="130" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="${fill}" fill-opacity="0.65">${slot}</text>`;
 }
 
 function toDataUri(svg: string): string {
