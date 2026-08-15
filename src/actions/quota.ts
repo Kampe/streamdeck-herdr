@@ -86,7 +86,8 @@ export class Quota extends SingletonAction<QuotaSettings> {
   async #render(entry: QuotaEntry): Promise<void> {
     const provider = entry.settings.provider ?? "codex";
     const pool = entry.settings.pool ?? "all";
+    const display = entry.settings.display ?? "remaining";
     await entry.key.setTitle("");
-    await entry.key.setImage(renderQuotaKey(this.store.state, provider, pool));
+    await entry.key.setImage(renderQuotaKey(this.store.state, provider, pool, display));
   }
 }

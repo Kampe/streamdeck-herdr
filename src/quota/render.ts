@@ -3,9 +3,9 @@ import { agentGlyph, GLYPH_BOX } from "../render/agent-glyph.js";
 
 const SIZE = 144;
 
-export function renderQuotaKey(state: QuotaState, provider: string, pool: string): string {
+export function renderQuotaKey(state: QuotaState, provider: string, pool: string, display: "remaining" | "used" = "remaining"): string {
   const quota = state.status === "ready" ? state.snapshot.providers[provider]?.pools[pool] : undefined;
-  const view = quotaView(state, quota);
+  const view = quotaView(state, quota, display);
   const poolLabel = pool === "all" || pool === "default" ? "" : pool.toUpperCase();
   const iconSize = 34;
   const iconScale = iconSize / GLYPH_BOX;
@@ -37,6 +37,7 @@ function providerGlyph(provider: string, color: string): string {
 function quotaView(
   state: QuotaState,
   quota: QuotaInfo | undefined,
+  display: "remaining" | "used",
 ): { background: string; foreground: string; value: string; reset: string } {
   if (state.status === "loading") {
     return { background: "#243047", foreground: "#ffffff", value: "…", reset: "loading" };
@@ -44,14 +45,15 @@ function quotaView(
   if (state.status === "error" || quota === undefined || quota.remaining === null) {
     return { background: "#4a2530", foreground: "#ffffff", value: "!", reset: "unavailable" };
   }
+  const value = display === "used" ? 100 - quota.remaining : quota.remaining;
   if (quota.stale) {
-    return { background: "#3a3f47", foreground: "#ffffff", value: `${quota.remaining}%`, reset: "stale" };
+    return { background: "#3a3f47", foreground: "#ffffff", value: `${Math.round(value)}%`, reset: "stale" };
   }
   const background = quota.remaining <= 20 ? "#a61e2d" : quota.remaining <= 50 ? "#d97706" : "#147d64";
   return {
     background,
     foreground: "#ffffff",
-    value: `${Math.round(quota.remaining)}%`,
+    value: `${Math.round(value)}%`,
     reset: quota.resetsIn,
   };
 }

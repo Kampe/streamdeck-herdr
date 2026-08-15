@@ -39,4 +39,10 @@ describe("renderQuotaKey", () => {
     expect(svg).toContain("<path");
     expect(svg).not.toContain(">GROK<");
   });
+
+  it("renders consumed percentage when requested", () => {
+    const svg = decode(renderQuotaKey(ready, "grok", "all", "used"));
+    expect(svg).toContain("27%");
+    expect(svg).not.toContain("73%");
+  });
 });
