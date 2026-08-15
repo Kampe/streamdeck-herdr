@@ -16,27 +16,62 @@ import { join } from "node:path";
 
 const PLUGIN_UUID = "com.github.yuntan.herdr";
 
-/** Stream Deck Neo のモデル識別子。 */
-const DEVICE_MODEL = "20GBJ9901";
-
-/** プロファイルの識別子。生成物を安定させるため固定値にする。 */
-const PROFILE_ID = "7B7B4E8A-4C0B-4F7C-9E52-6C2A5F5E1A01";
-
-const OUTPUT = "com.github.yuntan.herdr.sdPlugin/profiles/herdr-neo.streamDeckProfile";
+const DEFAULT_PROMPT = "Continue with the task. If blocked, explain exactly what you need.";
 
 /**
  * 上段はエージェント 1〜4、下段は承認 / 拒否 / 中断 / プロンプト。
  * 座標は `"列,段"`（0 始まり）。
  */
-const KEYS = [
-  ["0,0", "agent-slot", "Agent", { binding: "index", index: 1 }],
-  ["1,0", "agent-slot", "Agent", { binding: "index", index: 2 }],
-  ["2,0", "agent-slot", "Agent", { binding: "index", index: 3 }],
-  ["3,0", "agent-slot", "Agent", { binding: "index", index: 4 }],
-  ["0,1", "send-keys", "Send Keys", { binding: "focused", preset: "approve" }],
-  ["1,1", "send-keys", "Send Keys", { binding: "focused", preset: "reject" }],
-  ["2,1", "send-keys", "Send Keys", { binding: "focused", preset: "interrupt" }],
-  ["3,1", "prompt", "Send Prompt", { binding: "focused", text: "" }],
+const pagedAgent = (index) => ["agent-slot", "Agent", { binding: "index", index, paged: true }];
+
+const PROFILES = [
+  {
+    id: "7B7B4E8A-4C0B-4F7C-9E52-6C2A5F5E1A01",
+    model: "20GBJ9901",
+    output: "com.github.yuntan.herdr.sdPlugin/profiles/herdr-neo.streamDeckProfile",
+    keys: [
+      ["0,0", ...pagedAgent(1)],
+      ["1,0", ...pagedAgent(2)],
+      ["2,0", ...pagedAgent(3)],
+      ["3,0", ...pagedAgent(4)],
+      ["0,1", "page-previous", "Previous Agent Page", {}],
+      ["1,1", "page-next", "Next Agent Page", {}],
+      ["2,1", "send-keys", "Send Keys", { binding: "focused", preset: "approve" }],
+      [
+        "3,1",
+        "prompt",
+        "Send Prompt",
+        { binding: "focused", label: "Continue", text: DEFAULT_PROMPT },
+      ],
+    ],
+  },
+  {
+    id: "6C4BB1A7-9F8E-4D32-A31E-FA24D1575B02",
+    model: "20GAA9902",
+    output: "com.github.yuntan.herdr.sdPlugin/profiles/herdr-original.streamDeckProfile",
+    keys: [
+      ["0,0", ...pagedAgent(1)],
+      ["1,0", ...pagedAgent(2)],
+      ["2,0", ...pagedAgent(3)],
+      ["3,0", ...pagedAgent(4)],
+      ["4,0", ...pagedAgent(5)],
+      ["0,1", ...pagedAgent(6)],
+      ["1,1", ...pagedAgent(7)],
+      ["2,1", ...pagedAgent(8)],
+      ["3,1", "page-next", "Agent Page", {}],
+      ["4,1", "pane-close", "Close Pane", {}],
+      ["0,2", "send-keys", "Send Keys", { binding: "focused", preset: "approve" }],
+      ["1,2", "send-keys", "Send Keys", { binding: "focused", preset: "interrupt" }],
+      [
+        "2,2",
+        "prompt",
+        "Send Prompt",
+        { binding: "focused", label: "Continue", text: DEFAULT_PROMPT },
+      ],
+      ["3,2", "pane-split", "Split Pane", {}],
+      ["4,2", "pane-swap", "Swap Pane", {}],
+    ],
+  },
 ];
 
 /** タイトルはキー画像の下端に重ねる。manifest の States と揃えておく。 */
@@ -54,13 +89,13 @@ function state() {
   };
 }
 
-function build() {
+function build(profile) {
   const staging = mkdtempSync(join(tmpdir(), "herdr-profile-"));
-  const folder = `${PROFILE_ID}.sdProfile`;
+  const folder = `${profile.id}.sdProfile`;
   mkdirSync(join(staging, folder), { recursive: true });
 
   const actions = {};
-  for (const [coordinates, actionName, name, settings] of KEYS) {
+  for (const [coordinates, actionName, name, settings] of profile.keys) {
     actions[coordinates] = {
       Name: name,
       Settings: settings,
@@ -74,7 +109,7 @@ function build() {
     join(staging, folder, "manifest.json"),
     JSON.stringify({
       Actions: actions,
-      DeviceModel: DEVICE_MODEL,
+      DeviceModel: profile.model,
       InstalledByPluginUUID: PLUGIN_UUID,
       Name: "herdr",
       PreconfiguredName: "herdr",
@@ -82,12 +117,14 @@ function build() {
     }),
   );
 
-  rmSync(OUTPUT, { force: true });
+  rmSync(profile.output, { force: true });
   execFileSync("zip", ["-r", "-q", "-X", join(staging, "profile.zip"), folder], { cwd: staging });
-  execFileSync("cp", [join(staging, "profile.zip"), OUTPUT]);
+  execFileSync("cp", [join(staging, "profile.zip"), profile.output]);
   rmSync(staging, { recursive: true, force: true });
 
-  console.log(`built ${OUTPUT}`);
+  console.log(`built ${profile.output}`);
 }
 
-build();
+for (const profile of PROFILES) {
+  build(profile);
+}

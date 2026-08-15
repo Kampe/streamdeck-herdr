@@ -13,6 +13,26 @@
     "Name": "Send Prompt",
     "Tooltip": "Send a saved prompt to an agent."
   },
+  "com.github.yuntan.herdr.page-previous": {
+    "Name": "Previous Agent Page",
+    "Tooltip": "Show the previous page of live Herdr agents."
+  },
+  "com.github.yuntan.herdr.page-next": {
+    "Name": "Next Agent Page",
+    "Tooltip": "Tap for the next agent page; hold for the previous page."
+  },
+  "com.github.yuntan.herdr.pane-split": {
+    "Name": "Split Pane",
+    "Tooltip": "Tap to split right; hold to split down."
+  },
+  "com.github.yuntan.herdr.pane-swap": {
+    "Name": "Swap Pane",
+    "Tooltip": "Tap to swap right; hold to swap down."
+  },
+  "com.github.yuntan.herdr.pane-close": {
+    "Name": "Close Pane",
+    "Tooltip": "Hold to close the focused pane."
+  },
   "Localization": {
     "Approve": "Approve",
     "Reject": "Reject",
@@ -21,6 +41,9 @@
     "Interrupt": "Interrupt",
     "Send Keys": "Send Keys",
     "Prompt": "Prompt",
+    "Split": "Split",
+    "Swap": "Swap",
+    "Hold Close": "Hold Close",
     "No keys are configured to send": "No keys are configured to send",
     "No prompt is configured to send": "No prompt is configured to send"
   }

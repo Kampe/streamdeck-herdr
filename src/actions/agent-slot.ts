@@ -15,6 +15,7 @@ import streamDeck, {
   type WillDisappearEvent,
 } from "@elgato/streamdeck";
 
+import type { AgentPager } from "../agent-pager.js";
 import { ACTION_UUID_AGENT_SLOT } from "../constants.js";
 import { resolveAgent } from "../herdr/target.js";
 import type { HerdrStore } from "../herdr/store.js";
@@ -25,18 +26,21 @@ import type { AgentSlotSettings } from "../settings.js";
 type SlotEntry = {
   key: KeyAction<AgentSlotSettings>;
   settings: AgentSlotSettings;
-  unsubscribe: () => void;
+  unsubscribeStore: () => void;
+  unsubscribePager: () => void;
 };
 
 @action({ UUID: ACTION_UUID_AGENT_SLOT })
 export class AgentSlot extends SingletonAction<AgentSlotSettings> {
   readonly #store: HerdrStore;
+  readonly #pager: AgentPager;
   /** 表示中のキー。`onWillDisappear` で必ず取り除く。 */
   readonly #entries = new Map<string, SlotEntry>();
 
-  constructor(store: HerdrStore) {
+  constructor(store: HerdrStore, pager: AgentPager) {
     super();
     this.#store = store;
+    this.#pager = pager;
   }
 
   override onWillAppear(ev: WillAppearEvent<AgentSlotSettings>): void {
@@ -48,9 +52,11 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
     const entry: SlotEntry = {
       key,
       settings: ev.payload.settings,
-      unsubscribe: () => {},
+      unsubscribeStore: () => {},
+      unsubscribePager: () => {},
     };
-    entry.unsubscribe = this.#store.subscribe(() => void this.#render(entry));
+    entry.unsubscribeStore = this.#store.subscribe(() => void this.#render(entry));
+    entry.unsubscribePager = this.#pager.subscribe(() => void this.#render(entry));
     this.#entries.set(key.id, entry);
   }
 
@@ -59,7 +65,8 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
     if (entry === undefined) {
       return;
     }
-    entry.unsubscribe();
+    entry.unsubscribeStore();
+    entry.unsubscribePager();
     this.#entries.delete(ev.action.id);
   }
 
@@ -73,9 +80,12 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
   }
 
   override async onKeyDown(ev: KeyDownEvent<AgentSlotSettings>): Promise<void> {
-    const target =
-      resolveAgent(ev.payload.settings, this.#store.snapshot, "index")?.paneId ?? null;
-    if (target === null) {
+    const target = resolveAgent(
+      this.#effectiveSettings(ev.payload.settings),
+      this.#store.snapshot,
+      "index",
+    )?.paneId;
+    if (target === undefined) {
       await ev.action.showAlert();
       return;
     }
@@ -90,8 +100,9 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
 
   async #render(entry: SlotEntry): Promise<void> {
     const { key, settings } = entry;
+    const effectiveSettings = this.#effectiveSettings(settings);
     const binding = settings.binding ?? "index";
-    const slot = binding === "index" ? (settings.index ?? 1) : undefined;
+    const slot = binding === "index" ? (effectiveSettings.index ?? 1) : undefined;
     const state = this.#store.state;
 
     if (state.status === "offline") {
@@ -100,7 +111,7 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
       return;
     }
 
-    const agent = resolveAgent(settings, state.snapshot, "index");
+    const agent = resolveAgent(effectiveSettings, state.snapshot, "index");
     if (agent === null) {
       await key.setImage(renderAgentKey({ kind: "empty", slot }));
       await key.setTitle(resolveSlotTitle(settings, null, state.snapshot));
@@ -111,5 +122,12 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
       renderAgentKey({ kind: "agent", status: agent.status, agent: agent.agent, slot }),
     );
     await key.setTitle(resolveSlotTitle(settings, agent, state.snapshot));
+  }
+
+  #effectiveSettings(settings: AgentSlotSettings): AgentSlotSettings {
+    if (settings.paged !== true || (settings.binding ?? "index") !== "index") {
+      return settings;
+    }
+    return { ...settings, index: this.#pager.absoluteIndex(settings.index ?? 1) };
   }
 }

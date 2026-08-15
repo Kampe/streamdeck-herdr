@@ -31,6 +31,8 @@ export type TargetSettings = {
 };
 
 export type AgentSlotSettings = TargetSettings & {
+  /** Treat `index` as a slot on the shared agent page instead of an absolute index. */
+  paged?: boolean;
   labelSource?: LabelSource;
   customLabel?: string;
 };

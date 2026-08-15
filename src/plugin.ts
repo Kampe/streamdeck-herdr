@@ -6,6 +6,7 @@
 
 import streamDeck from "@elgato/streamdeck";
 
+import { AgentPager } from "./agent-pager.js";
 import {
   AGENT_DATA_SOURCE,
   agentDataSourceItems,
@@ -13,6 +14,8 @@ import {
 } from "./actions/agent-datasource.js";
 import { AgentSlot } from "./actions/agent-slot.js";
 import { Prompt } from "./actions/prompt.js";
+import { NextAgentPage, PreviousAgentPage } from "./actions/page-navigation.js";
+import { ClosePane, SplitPane, SwapPane } from "./actions/pane-control.js";
 import { SendKeys } from "./actions/send-keys.js";
 import { DEFAULT_SOCKET_PATH } from "./constants.js";
 import { HerdrStore } from "./herdr/store.js";
@@ -23,10 +26,16 @@ const store = new HerdrStore({
   log: (message, error) =>
     error === undefined ? streamDeck.logger.info(message) : streamDeck.logger.warn(message, error),
 });
+const pager = new AgentPager(8);
 
-streamDeck.actions.registerAction(new AgentSlot(store));
+streamDeck.actions.registerAction(new AgentSlot(store, pager));
 streamDeck.actions.registerAction(new SendKeys(store));
 streamDeck.actions.registerAction(new Prompt(store));
+streamDeck.actions.registerAction(new PreviousAgentPage(store, pager));
+streamDeck.actions.registerAction(new NextAgentPage(store, pager));
+streamDeck.actions.registerAction(new SplitPane(store));
+streamDeck.actions.registerAction(new SwapPane(store));
+streamDeck.actions.registerAction(new ClosePane(store));
 
 await streamDeck.connect();
 
@@ -34,6 +43,7 @@ await streamDeck.connect();
 const globalSettings = await streamDeck.settings.getGlobalSettings<GlobalSettings>();
 store.setSocketPath(globalSettings.socketPath ?? DEFAULT_SOCKET_PATH);
 store.start();
+store.subscribe((state) => pager.clamp(state.status === "online" ? state.snapshot.agents.length : 0));
 
 streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) => {
   store.setSocketPath(ev.settings.socketPath ?? DEFAULT_SOCKET_PATH);

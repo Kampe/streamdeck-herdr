@@ -28,6 +28,12 @@
       "DeviceType": 9,
       "Readonly": false,
       "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/herdr-original",
+      "DeviceType": 0,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true
     }
   ],
   "Actions": [
@@ -78,6 +84,46 @@
           "FontSize": 9
         }
       ]
+    },
+    {
+      "Name": "Previous Agent Page",
+      "UUID": "com.github.yuntan.herdr.page-previous",
+      "Icon": "imgs/keys/page-previous",
+      "Tooltip": "Show the previous page of live Herdr agents.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/page-previous", "TitleAlignment": "bottom", "FontSize": 9 }]
+    },
+    {
+      "Name": "Next Agent Page",
+      "UUID": "com.github.yuntan.herdr.page-next",
+      "Icon": "imgs/keys/page-next",
+      "Tooltip": "Tap for the next agent page; hold for the previous page.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/page-next", "TitleAlignment": "bottom", "FontSize": 9 }]
+    },
+    {
+      "Name": "Split Pane",
+      "UUID": "com.github.yuntan.herdr.pane-split",
+      "Icon": "imgs/keys/pane-split",
+      "Tooltip": "Tap to split right; hold to split down.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/pane-split", "TitleAlignment": "bottom", "FontSize": 9 }]
+    },
+    {
+      "Name": "Swap Pane",
+      "UUID": "com.github.yuntan.herdr.pane-swap",
+      "Icon": "imgs/keys/pane-swap",
+      "Tooltip": "Tap to swap right; hold to swap down.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/pane-swap", "TitleAlignment": "bottom", "FontSize": 9 }]
+    },
+    {
+      "Name": "Close Pane",
+      "UUID": "com.github.yuntan.herdr.pane-close",
+      "Icon": "imgs/keys/pane-close",
+      "Tooltip": "Hold to close the focused pane.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/pane-close", "TitleAlignment": "bottom", "FontSize": 9 }]
     }
   ]
 }

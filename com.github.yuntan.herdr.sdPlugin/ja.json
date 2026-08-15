@@ -13,6 +13,26 @@
     "Name": "プロンプト送信",
     "Tooltip": "対象エージェントに定型プロンプトを投入します。"
   },
+  "com.github.yuntan.herdr.page-previous": {
+    "Name": "前のエージェントページ",
+    "Tooltip": "herdr エージェントの前のページを表示します。"
+  },
+  "com.github.yuntan.herdr.page-next": {
+    "Name": "次のエージェントページ",
+    "Tooltip": "短押しで次、長押しで前のエージェントページを表示します。"
+  },
+  "com.github.yuntan.herdr.pane-split": {
+    "Name": "ペイン分割",
+    "Tooltip": "短押しで右、長押しで下に分割します。"
+  },
+  "com.github.yuntan.herdr.pane-swap": {
+    "Name": "ペイン交換",
+    "Tooltip": "短押しで右、長押しで下のペインと交換します。"
+  },
+  "com.github.yuntan.herdr.pane-close": {
+    "Name": "ペインを閉じる",
+    "Tooltip": "長押しでフォーカス中のペインを閉じます。"
+  },
   "Localization": {
     "Approve": "承認",
     "Reject": "拒否",
@@ -21,6 +41,9 @@
     "Interrupt": "中断",
     "Send Keys": "キー送信",
     "Prompt": "プロンプト",
+    "Split": "分割",
+    "Swap": "交換",
+    "Hold Close": "長押しで閉じる",
     "No keys are configured to send": "送信するキーが設定されていません",
     "No prompt is configured to send": "送信するプロンプトが設定されていません"
   }

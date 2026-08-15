@@ -15,6 +15,11 @@ export const PLUGIN_UUID = "com.github.yuntan.herdr";
 export const ACTION_UUID_AGENT_SLOT = `${PLUGIN_UUID}.agent-slot`;
 export const ACTION_UUID_SEND_KEYS = `${PLUGIN_UUID}.send-keys`;
 export const ACTION_UUID_PROMPT = `${PLUGIN_UUID}.prompt`;
+export const ACTION_UUID_PAGE_PREVIOUS = `${PLUGIN_UUID}.page-previous`;
+export const ACTION_UUID_PAGE_NEXT = `${PLUGIN_UUID}.page-next`;
+export const ACTION_UUID_PANE_SPLIT = `${PLUGIN_UUID}.pane-split`;
+export const ACTION_UUID_PANE_SWAP = `${PLUGIN_UUID}.pane-swap`;
+export const ACTION_UUID_PANE_CLOSE = `${PLUGIN_UUID}.pane-close`;
 
 /**
  * 既定のソケットパス。Stream Deck のプラグインプロセスは herdr の環境変数を

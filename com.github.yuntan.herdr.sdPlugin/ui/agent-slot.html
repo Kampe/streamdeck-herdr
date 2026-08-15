@@ -27,6 +27,10 @@
       ></sdpi-range>
     </sdpi-item>
 
+    <sdpi-item id="row-paged" label="__MSG_paged__" hidden>
+      <sdpi-checkbox setting="paged" default="false"></sdpi-checkbox>
+    </sdpi-item>
+
     <sdpi-item id="row-session" label="__MSG_agent__" hidden>
       <sdpi-select
         setting="sessionId"
@@ -59,7 +63,11 @@
     </sdpi-item>
 
     <script>
-      bindToggle("binding", { "row-index": ["index"], "row-session": ["session"] });
+      bindToggle("binding", {
+        "row-index": ["index"],
+        "row-paged": ["index"],
+        "row-session": ["session"]
+      });
       bindToggle("labelSource", { "row-custom-label": ["custom"] });
     </script>
   </body>
