@@ -96,4 +96,10 @@ describe("renderAgentKey", () => {
   it("renders the fleet slot in a high-contrast chip", () => {
     expect(render({ kind: "agent", status: "idle", agent: "codex", slot: 3 })).toContain('rx="8"');
   });
+
+  it("supports a restrained completion shimmer", () => {
+    const svg = render({ kind: "agent", status: "done", agent: "codex", flash: true });
+    expect(svg).toContain('stroke-opacity="0.42"');
+    expect(svg).toContain('fill-opacity="0.12"');
+  });
 });

@@ -23,12 +23,16 @@ import { bringITermToFront } from "../platform/foreground.js";
 import { renderAgentKey } from "../render/key-image.js";
 import { resolveSlotTitle } from "../render/labels.js";
 import type { AgentSlotSettings } from "../settings.js";
+import type { AgentStatus } from "../herdr/types.js";
 
 type SlotEntry = {
   key: KeyAction<AgentSlotSettings>;
   settings: AgentSlotSettings;
   unsubscribeStore: () => void;
   unsubscribePager: () => void;
+  lastStatus?: AgentStatus;
+  flashUntil?: number;
+  flashTimer?: ReturnType<typeof setTimeout>;
 };
 
 @action({ UUID: ACTION_UUID_AGENT_SLOT })
@@ -72,6 +76,7 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
     }
     entry.unsubscribeStore();
     entry.unsubscribePager();
+    if (entry.flashTimer !== undefined) clearTimeout(entry.flashTimer);
     this.#entries.delete(ev.action.id);
   }
 
@@ -111,6 +116,7 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
     const state = this.#store.state;
 
     if (state.status === "offline") {
+      entry.lastStatus = undefined;
       await key.setImage(renderAgentKey({ kind: "offline" }));
       await key.setTitle("");
       return;
@@ -118,10 +124,24 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
 
     const agent = this.#resolveAgent(settings, state.snapshot);
     if (agent === null) {
+      entry.lastStatus = undefined;
       await key.setImage(renderAgentKey({ kind: "empty", slot }));
       await key.setTitle(resolveSlotTitle(settings, null, state.snapshot));
       return;
     }
+
+    const isNewCompletion = entry.lastStatus !== undefined && entry.lastStatus !== "done" && agent.status === "done";
+    if (isNewCompletion) {
+      entry.flashUntil = Date.now() + 900;
+      if (entry.flashTimer !== undefined) clearTimeout(entry.flashTimer);
+      entry.flashTimer = setTimeout(() => {
+        entry.flashUntil = undefined;
+        entry.flashTimer = undefined;
+        void this.#render(entry);
+      }, 920);
+    }
+    const flash = entry.flashUntil !== undefined && entry.flashUntil > Date.now();
+    entry.lastStatus = agent.status;
 
     await key.setImage(
       renderAgentKey({
@@ -130,6 +150,7 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
         agent: agent.agent,
         slot,
         focused: agent.focused,
+        flash,
       }),
     );
     await key.setTitle(resolveSlotTitle(settings, agent, state.snapshot));

@@ -30,6 +30,7 @@ export type AgentKeyView =
       agent: string | null;
       slot?: number;
       focused?: boolean;
+      flash?: boolean;
     };
 
 /** グリフを描く領域の一辺（px）。上端のタイトルに重ならないよう下寄せに置く。 */
@@ -58,6 +59,10 @@ function buildSvg(view: AgentKeyView): string {
     parts.push(glyph(view.agent, foreground));
     parts.push(statusBadge(view.status, foreground));
     parts.push(slotBadge(view.slot, foreground));
+    if (view.flash === true) {
+      parts.push('<rect x="7" y="7" width="130" height="130" rx="14" fill="none" stroke="#ffffff" stroke-width="5" stroke-opacity="0.42"/>');
+      parts.push('<path d="M-8 112 112 -8h20L12 132Z" fill="#ffffff" fill-opacity="0.12"/>');
+    }
     if (view.focused === true) {
       parts.push(
         `<rect x="5" y="5" width="${KEY_IMAGE_SIZE - 10}" height="${KEY_IMAGE_SIZE - 10}" rx="15" fill="none" stroke="#ffffff" stroke-width="6"/>`,
