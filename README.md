@@ -1,85 +1,250 @@
 # streamdeck-herdr
 
-[herdr](https://herdr.dev) のエージェントを Stream Deck から操作するプラグイン。走っているエージェントの状態をキーの色で常時表示し、押せばそのエージェントへ切り替わる。承認・拒否・中断・定型プロンプトの投入もキー 1 つで行える。
+Control live [Herdr](https://herdr.dev) coding agents from an Elgato Stream Deck.
+The plugin shows agent state, focuses exact panes, pages across large fleets,
+sends keys and saved prompts, controls pane layout, and displays live AI-provider
+quota.
 
-操作モデルは OpenAI の Codex Micro に倣っている。対象は macOS + Stream Deck Neo（8 キー）。
+Agent and pane controls use Herdr's local socket API. They do not depend on
+global keyboard shortcuts, terminal focus, UI scripting, browser automation,
+or OpenUsage. Provider quota is a separate, optional integration.
 
-![Stream Deck Neo で herdr のエージェントを操作している様子](docs/streamdeck-neo.jpg)
+![Herdr agents on a Stream Deck Neo](docs/streamdeck-neo.jpg)
 
-上段の 4 キーがエージェントで、キーの中央に種別のグリフ（左 2 つが `claude`、3 つ目が `codex`、4 つ目が `opencode`）、下にワークスペース名が出る。
+## What this fork adds
 
-## 必要なもの
+- English and Japanese localization.
+- Dynamic, shared agent pages instead of a fixed four-agent layout.
+- Stable ordering by Herdr workspace number and pane ID.
+- A white outline around the focused agent and automatic page following when
+  Herdr focus changes.
+- Larger, top-aligned workspace labels that remain readable on a desk-mounted
+  Stream Deck.
+- Native split, swap, close, interrupt, and prompt actions through the Herdr
+  socket protocol.
+- Live Claude, Codex, Antigravity, and Grok quota from OpenUsage, with provider
+  icons, remaining percentage, reset time, and pool selection.
+- Ready-to-import profiles for the original 15-key Stream Deck and Stream Deck
+  Neo.
 
-- macOS 12 以降、Stream Deck ソフトウェア 6.4 以降
-- herdr が同じマシンで動いていること（`~/.config/herdr/herdr.sock` を使う）
+## Requirements
 
-herdr が起動していないときは全キーがオフライン表示になり、起動し直せば自動で復帰する。
+- macOS 12 or later.
+- Stream Deck software 6.4 or later.
+- Herdr running on the same machine. The default socket is
+  `~/.config/herdr/herdr.sock`.
+- Node.js and npm for development installs.
+- Optional quota dependencies described in [Quota](#quota).
 
-## アクション
+When Herdr is unavailable, agent keys show a red dashed border and `×`. They
+recover automatically after the Herdr socket becomes available again.
 
-| アクション | 役割 |
-| --- | --- |
-| エージェント | エージェント 1 つを 1 キーに割り当て、状態を色で表示する。押すとフォーカスする |
-| キー送信 | 対象エージェントにキー列を送る（承認 / 拒否 / はい / いいえ / 中断 / 自由入力） |
-| プロンプト送信 | 対象エージェントに定型プロンプトを投入する |
+## Agent keys and paging
 
-### 状態の色
+Each agent key shows:
 
-| 状態 | 色 | 意味 |
+- The workspace name at the top.
+- A provider glyph in the center.
+- Its absolute fleet slot at the lower right.
+- A white outline when that pane is focused in Herdr.
+
+Agents are sorted by Herdr workspace number, then pane ID. A page is a window
+over that one ordered fleet; it is not a Herdr workspace or tab. Pressing the
+page key only browses the fleet. Press an agent key to focus that exact pane.
+
+When focus changes in Herdr—whether from the Stream Deck, terminal, or another
+client—the deck automatically opens the page containing that agent. Manual page
+browsing remains manual until focus changes.
+
+The combined page key advances on a tap and goes backward after a 600 ms hold.
+The Neo profile uses separate Previous and Next keys.
+
+### Agent-state colors
+
+| State | Appearance | Meaning |
 | --- | --- | --- |
-| idle | 黒 | 入力待ち |
-| working | オレンジ | 実行中 |
-| blocked | 赤 | 承認・入力待ちで止まっている |
-| done | 水色 | 終了済み・未確認 |
-| unknown | 暗灰 | エージェントとして検出されていない |
-| 空スロット | 破線枠 + `—` | 対応するエージェントがいない |
-| オフライン | 赤い破線枠 + `×` | herdr に接続できていない |
+| `idle` | Black | Waiting for input |
+| `working` | Orange | Running |
+| `blocked` | Red | Waiting for approval or input |
+| `done` | Light blue | Finished and not yet acknowledged |
+| `unknown` | Dark gray | Herdr cannot identify the agent state |
+| Empty slot | Dashed border and `—` | No agent occupies this fleet slot |
+| Offline | Red dashed border and `×` | The Herdr socket is unavailable |
 
-キーの中央にはエージェント種別のグリフが出る。`claude` / `codex` / `gemini` / `cursor` / `opencode` は各社の公式ロゴマークを状態色で塗ったもの（パスの出所は [simple-icons](https://github.com/simple-icons/simple-icons)（CC0-1.0）と [lobe-icons](https://github.com/lobehub/lobe-icons)（MIT）、商標は各社に帰属）。それ以外の種別は頭 2 文字の字面（`cline` なら `CL`）。
+Claude, Codex, Gemini, Cursor, and OpenCode use logo glyphs. Other harnesses
+fall back to a two-letter mark. Logo paths come from
+[Simple Icons](https://github.com/simple-icons/simple-icons) (CC0-1.0),
+[Lobe Icons](https://github.com/lobehub/lobe-icons) (MIT), and
+[Dashboard Icons](https://github.com/homarr-labs/dashboard-icons)
+(Apache-2.0). Trademarks belong to their respective owners.
 
-「キー送信」はプリセットに応じてアイコンが変わる（承認 = チェック、拒否 = バツ、はい = `Y`、いいえ = `N`、中断 = 停止マーク、自由入力 = キーキャップ）。
+## Actions
 
-拒否と中断はどちらも Esc を送る。送るキーは同じでも、承認プロンプトを取り消すのか処理を止めるのかで押す動機が違うので、ラベルとアイコンを分けて両方用意している。
+| Action | Behavior |
+| --- | --- |
+| Agent | Show one agent's state and focus its exact Herdr pane when pressed |
+| Previous Agent Page | Show the previous fleet page |
+| Next Agent Page | Tap for next; hold for previous |
+| Send Keys | Send approve, reject, yes, no, interrupt, or a custom key sequence |
+| Send Prompt | Submit a saved prompt to the selected or focused agent |
+| Split Pane | Tap to split right; hold to split down |
+| Swap Pane | Tap to swap right; hold to swap down |
+| Close Pane | Hold for 600 ms to close the focused pane; a tap does nothing |
+| Quota | Show live provider quota; press to force a refresh |
 
-### 対象の指定
+Split, Swap, Close, and manual Approve remain available in the action library
+but are intentionally absent from the 15-key default profile. The default is
+optimized for an auto-approve workflow: fleet navigation, one Interrupt key,
+four quota keys, and Continue.
 
-- **フォーカス中のエージェント** — herdr で今フォーカスしているエージェント
-- **順番で指定** — ワークスペース番号順に数えて N 番目（Codex Micro の動的スロット相当）
-- **エージェントを固定** — 特定のエージェントセッションに固定する
+Reject and Interrupt both send Escape. They remain separate presets because
+they communicate different operator intent and have different labels and
+icons.
 
-「エージェント」アクションは順番か固定のどちらかを選ぶ。
+### Action targets
 
-## インストール（開発）
+Actions that operate on an agent can target:
 
-```sh
+- **Focused agent** — whichever agent Herdr currently focuses.
+- **Fleet index** — the Nth agent in stable fleet order.
+- **Pinned session** — one persistent agent session UUID.
+
+Paged agent keys use fleet indexes. Other controls default to the focused
+agent. Configure targeting and labels in the Stream Deck Property Inspector.
+
+## Quota (optional)
+
+Herdr 0.8/protocol 19 does not expose provider billing limits, percentages, or
+reset windows. The core plugin therefore needs only Herdr, but real quota keys
+need an external usage source. A profile with no quota actions never starts
+quota polling and does not require OpenUsage or `herdr-quota`.
+
+The quota data path is:
+
+```text
+Stream Deck plugin → herdr-quota --json → OpenUsage provider adapters
+```
+
+The plugin does not scrape provider UIs itself. It runs one shared
+`herdr-quota --json` request, renders only the normalized fields it needs, and
+refreshes every 60 seconds. OpenUsage provides a shared five-minute cache.
+Pressing any quota key runs `herdr-quota --json --force` to bypass that cache.
+
+Runtime dependencies:
+
+- [OpenUsage](https://www.openusage.ai/) and its `openusage` CLI.
+- The `herdr-quota` zsh helper on an executable path.
+- `python3`, used by `herdr-quota` to validate and normalize OpenUsage JSON.
+
+The plugin finds `herdr-quota` in this order:
+
+1. `HERDR_QUOTA_BIN`
+2. `~/bin/herdr-quota`
+3. `/usr/local/bin/herdr-quota`
+4. `/opt/homebrew/bin/herdr-quota`
+
+Install OpenUsage on macOS with:
+
+```zsh
+brew install --cask openusage
+```
+
+Verify the complete chain before adding quota keys:
+
+```zsh
+command -v openusage herdr-quota python3
+openusage --version
+herdr-quota --json | jq '.providers | keys'
+```
+
+The Property Inspector supports these views:
+
+| Provider | Pools |
+| --- | --- |
+| Claude | `all`, `default`, `fable` |
+| Codex | `all`, `default`, `spark` |
+| Antigravity | `all`, `gemini`, `nonGemini` |
+| Grok | `all`, `default` |
+
+A quota key shows `!` when the helper is missing, OpenUsage fails, or the
+selected provider/pool has no usable data. A gray key means the returned data
+is stale. Remaining quota uses green, amber, and red backgrounds as pressure
+increases.
+
+On the development machine used for this fork, OpenUsage, `herdr-quota`, and
+Python 3 are already installed; no additional setup is needed. Most users will
+not have these tools by default and can omit Quota actions entirely.
+
+## Included profiles
+
+### Original 15-key Stream Deck
+
+This convenience profile is quota-enabled for the fork owner's setup. The
+plugin itself does not require quota tooling; replace or remove those four
+actions for a Herdr-only layout.
+
+| Row | Keys |
+| --- | --- |
+| Top | Agents 1–5 |
+| Middle | Agents 6–8 · Agent Page · Interrupt |
+| Bottom | Claude · Codex · Antigravity · Grok · Continue |
+
+Profile:
+`com.github.yuntan.herdr.sdPlugin/profiles/herdr-original.streamDeckProfile`
+
+### Stream Deck Neo
+
+This profile includes one optional Codex quota key. Replace it with any Herdr
+action if OpenUsage is not installed.
+
+| Row | Keys |
+| --- | --- |
+| Top | Agents 1–4 |
+| Bottom | Previous Page · Next Page · Codex quota · Continue |
+
+Profile:
+`com.github.yuntan.herdr.sdPlugin/profiles/herdr-neo.streamDeckProfile`
+
+Import a profile from the Stream Deck application's profile menu or open the
+`.streamDeckProfile` file directly. Edit `scripts/build-profile.mjs` and run
+`npm run build:profile` to regenerate both archives.
+
+## Installation for development
+
+```zsh
 npm install
 npm run build
 npx streamdeck link com.github.yuntan.herdr.sdPlugin
 npx streamdeck restart com.github.yuntan.herdr
 ```
 
-変更しながら動かす場合は `npm run watch` と `npx streamdeck dev` を使う。ログは `com.github.yuntan.herdr.sdPlugin/logs/` に出る。
+For iterative development, run `npm run watch` alongside `npx streamdeck dev`.
+Plugin logs are written under `com.github.yuntan.herdr.sdPlugin/logs/`.
 
-## Neo 用プロファイル
+## Configuration
 
-`com.github.yuntan.herdr.sdPlugin/profiles/herdr-neo.streamDeckProfile` に 8 キー分の配置を同梱している（上段 = エージェント 1〜4、下段 = 承認 / 拒否 / 中断 / プロンプト）。Stream Deck アプリのプロファイル一覧から読み込むか、ファイルをダブルクリックして取り込む。
+The default Herdr socket is `~/.config/herdr/herdr.sock`. For a named session,
+set the shared Socket Path in any action's Property Inspector to:
 
-配置を変えたいときは `scripts/build-profile.mjs` の `KEYS` を編集して `npm run build:profile` で作り直す。
-
-## 設定
-
-ソケットパスは既定で `~/.config/herdr/herdr.sock`。名前付きセッション（`herdr --session <name>`）を使っている場合は、どれかのアクションの Property Inspector にある「ソケットパス」に `~/.config/herdr/sessions/<name>/herdr.sock` を入れる（全アクション共通の設定として保存される）。
-
-## 開発
-
-```sh
-npm test          # vitest
-npm run build     # rollup
-npm run validate  # streamdeck validate
+```text
+~/.config/herdr/sessions/<name>/herdr.sock
 ```
 
-仕様は [spec/herdr-control.md](spec/herdr-control.md)、実装計画は [tasks/plan.md](tasks/plan.md)。
+## Development and verification
 
-herdr の API は「1 リクエスト 1 接続」で、応答を返すとサーバー側が接続を閉じる。長寿命の接続はイベント購読だけ。
+```zsh
+npm test
+npm run build
+npm run build:profile
+npm run validate
+```
 
-エージェントの状態はペインごとの `pane.agent_status_changed` を購読してその場で反映する（10〜100 ms で色が変わる）。ペインやワークスペースの増減は低頻度のイベントを合図に `session.snapshot` を取り直す。`pane.updated` はエージェントの出力中に毎秒 30 件近く流れるため購読していない。
+The protocol design is documented in
+[spec/herdr-control.md](spec/herdr-control.md), and the original implementation
+plan is in [tasks/plan.md](tasks/plan.md).
+
+Herdr uses one connection per request and closes it after responding. The
+plugin keeps only the event subscription alive. Agent status changes are
+applied directly from `pane.agent_status_changed`; structural events trigger a
+debounced `session.snapshot` refresh. High-frequency `pane.updated` events are
+deliberately excluded so active agents cannot flood the plugin with redraws.

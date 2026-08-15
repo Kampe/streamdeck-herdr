@@ -48,7 +48,6 @@ await streamDeck.connect();
 const globalSettings = await streamDeck.settings.getGlobalSettings<GlobalSettings>();
 store.setSocketPath(globalSettings.socketPath ?? DEFAULT_SOCKET_PATH);
 store.start();
-quotaStore.start();
 let previousFocusedPaneId: string | null | undefined;
 store.subscribe((state) => {
   if (state.status !== "online") {

@@ -18,10 +18,7 @@ const PLUGIN_UUID = "com.github.yuntan.herdr";
 
 const DEFAULT_PROMPT = "Continue with the task. If blocked, explain exactly what you need.";
 
-/**
- * 上段はエージェント 1〜4、下段は承認 / 拒否 / 中断 / プロンプト。
- * 座標は `"列,段"`（0 始まり）。
- */
+/** Profiles use zero-based `"column,row"` coordinates. */
 const pagedAgent = (index) => ["agent-slot", "Agent", { binding: "index", index, paged: true }];
 
 const PROFILES = [

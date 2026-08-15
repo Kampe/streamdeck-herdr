@@ -31,6 +31,9 @@ export class Quota extends SingletonAction<QuotaSettings> {
     if (!ev.action.isKey()) {
       return;
     }
+    // Keep the core plugin Herdr-only. OpenUsage is touched only when a quota
+    // action is actually present in the active profile.
+    this.store.start();
     const entry: QuotaEntry = {
       key: ev.action,
       settings: ev.payload.settings,
