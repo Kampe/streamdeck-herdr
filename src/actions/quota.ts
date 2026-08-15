@@ -62,9 +62,12 @@ export class Quota extends SingletonAction<QuotaSettings> {
 
   override async onKeyDown(ev: KeyDownEvent<QuotaSettings>): Promise<void> {
     const provider = ev.payload.settings.provider ?? "codex";
-    // Refresh display data, but do not make dispatch depend on OpenUsage being
-    // healthy. The key's primary action is the provider-only standing order.
-    await this.store.refresh(true);
+    // Refresh display data, but do not make dispatch wait on OpenUsage. The
+    // key's primary action is the provider-only standing order; quota I/O runs
+    // in parallel so a slow helper cannot delay the focused agent.
+    void this.store.refresh(true).catch((error) => {
+      streamDeck.logger.warn("Quota refresh failed", error);
+    });
     const target = resolveTarget({ binding: "focused" }, this.herdr.snapshot, "focused");
     if (target === null) {
       streamDeck.logger.warn("No focused agent is available for provider standing order");
