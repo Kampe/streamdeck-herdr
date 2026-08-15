@@ -23,8 +23,8 @@ const ITERM_ACTIVATE_SCRIPT = `tell application "iTerm2"
   end repeat
   if targetSession is not missing value then
     set index of targetWindow to 1
-    set selected tab of targetWindow to targetTab
-    set current session of targetTab to targetSession
+    select targetTab
+    select targetSession
   end if
   activate
 end tell`;
