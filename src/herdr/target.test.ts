@@ -62,6 +62,17 @@ describe("sortAgents", () => {
     ]);
   });
 
+  it("uses the full Herdr pane order instead of agent numbering", () => {
+    const visualOrder = snapshot({
+      paneOrder: ["wA:p1", "wB:p1", "wA:p3"],
+    });
+    expect(sortAgents(visualOrder).map((item) => item.paneId)).toEqual([
+      "wA:p1",
+      "wB:p1",
+      "wA:p3",
+    ]);
+  });
+
   it("keeps Herdr order even when workspace metadata is absent", () => {
     const withOrphan = snapshot({
       agents: [

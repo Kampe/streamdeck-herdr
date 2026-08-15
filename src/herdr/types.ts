@@ -40,6 +40,8 @@ export type WorkspaceInfo = {
 /** `session.snapshot` から取り出した、プラグインが必要とする範囲の状態。 */
 export type SessionSnapshot = {
   agents: AgentInfo[];
+  /** Full Herdr panel order, including non-agent panes when available. */
+  paneOrder?: string[];
   workspaces: WorkspaceInfo[];
   focusedPaneId: string | null;
 };
@@ -155,8 +157,15 @@ export function parseSessionSnapshot(value: unknown): SessionSnapshot | null {
     }
   }
 
+  const paneOrder = Array.isArray(snapshot.panes)
+    ? snapshot.panes.flatMap((item) =>
+      isRecord(item) && isString(item.pane_id) ? [item.pane_id] : [],
+    )
+    : undefined;
+
   return {
     agents,
+    paneOrder,
     workspaces,
     focusedPaneId: isString(snapshot.focused_pane_id) ? snapshot.focused_pane_id : null,
   };

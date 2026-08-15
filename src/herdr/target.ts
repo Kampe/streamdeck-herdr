@@ -15,7 +15,11 @@ import type { AgentInfo, SessionSnapshot } from "./types.js";
  * 再適用すると Stream Deck と Herdr の順番がずれてしまう。
  */
 export function sortAgents(snapshot: SessionSnapshot): AgentInfo[] {
-  return [...snapshot.agents];
+  const order = new Map((snapshot.paneOrder ?? snapshot.agents.map((agent) => agent.paneId))
+    .map((paneId, index) => [paneId, index]));
+  return [...snapshot.agents].sort((left, right) =>
+    (order.get(left.paneId) ?? Number.MAX_SAFE_INTEGER) -
+    (order.get(right.paneId) ?? Number.MAX_SAFE_INTEGER));
 }
 
 /**
