@@ -61,13 +61,14 @@ async function wakeDisplay(): Promise<void> {
 
 /**
  * tmux's lock-after-time runs the configured cmatrix command in the client.
- * Only send Escape when that exact saver is present; never inject a control
+ * Only send Space when that saver is present; never inject a key
  * key into a live agent just because the terminal has been idle.
  */
 async function clearTmuxScreensaver(run: OsascriptRunner): Promise<void> {
   try {
-    await execFileAsync("/usr/bin/pgrep", ["-f", "cmatrix -s -C green"], { timeout: 500 });
-    await run(["-e", 'tell application "System Events" to key code 53']);
+    await execFileAsync("/usr/bin/pgrep", ["-f", "cmatrix"], { timeout: 500 });
+    // tmux's lock client consumes Space to dismiss the lock screen.
+    await run(["-e", 'tell application "System Events" to key code 49']);
   } catch {
     // No configured saver, or Automation permission is unavailable.
   }
