@@ -9,6 +9,9 @@ import streamDeck, {
 } from "@elgato/streamdeck";
 
 import { ACTION_UUID_QUOTA } from "../constants.js";
+import { resolveTarget } from "../herdr/target.js";
+import type { HerdrStore } from "../herdr/store.js";
+import { providerStandingOrder } from "../provider-prompt.js";
 import { renderQuotaKey } from "../quota/render.js";
 import type { QuotaStore } from "../quota/store.js";
 import type { QuotaSettings } from "../settings.js";
@@ -23,7 +26,7 @@ type QuotaEntry = {
 export class Quota extends SingletonAction<QuotaSettings> {
   readonly #entries = new Map<string, QuotaEntry>();
 
-  constructor(private readonly store: QuotaStore) {
+  constructor(private readonly store: QuotaStore, private readonly herdr: HerdrStore) {
     super();
   }
 
@@ -58,11 +61,24 @@ export class Quota extends SingletonAction<QuotaSettings> {
   }
 
   override async onKeyDown(ev: KeyDownEvent<QuotaSettings>): Promise<void> {
+    const provider = ev.payload.settings.provider ?? "codex";
+    // Refresh display data, but do not make dispatch depend on OpenUsage being
+    // healthy. The key's primary action is the provider-only standing order.
     await this.store.refresh(true);
-    if (this.store.state.status === "ready") {
+    const target = resolveTarget({ binding: "focused" }, this.herdr.snapshot, "focused");
+    if (target === null) {
+      streamDeck.logger.warn("No focused agent is available for provider standing order");
+      await ev.action.showAlert();
+      return;
+    }
+    try {
+      await this.herdr.request("agent.prompt", {
+        target,
+        text: providerStandingOrder(provider),
+      });
       await ev.action.showOk();
-    } else {
-      streamDeck.logger.warn("Quota refresh failed", this.store.state);
+    } catch (error) {
+      streamDeck.logger.error("Provider standing order failed", error);
       await ev.action.showAlert();
     }
   }

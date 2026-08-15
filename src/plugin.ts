@@ -68,7 +68,7 @@ streamDeck.actions.registerAction(new NextAgentPage(store, pager, () => favorite
 streamDeck.actions.registerAction(new SplitPane(store));
 streamDeck.actions.registerAction(new SwapPane(store));
 streamDeck.actions.registerAction(new ClosePane(store));
-streamDeck.actions.registerAction(new Quota(quotaStore));
+streamDeck.actions.registerAction(new Quota(quotaStore, store));
 streamDeck.actions.registerAction(new AgentQueue(store, pager));
 streamDeck.actions.registerAction(new AgentView(store, pager, () => favorites.ids));
 streamDeck.actions.registerAction(new WorkspacePage(store, pager));

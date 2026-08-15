@@ -100,7 +100,7 @@ fall back to a two-letter mark. Logo paths come from
 | Split Pane | Tap to split right; hold to split down |
 | Swap Pane | Tap to swap right; hold to swap down |
 | Close Pane | Hold for 600 ms to close the focused pane; a tap does nothing |
-| Quota | Show live provider quota; press to force a refresh |
+| Quota | Show live provider quota; press to refresh and issue a provider-only dispatch order |
 | Agent Queue | Focus the next attention-needed or idle agent; show the count |
 | Agent View | Cycle Fleet, Attention, Idle, Favorites, and Workspace views |
 | Workspace Page | Tap to advance workspace; hold for the previous workspace |
@@ -150,7 +150,12 @@ Stream Deck plugin → herdr-quota --json → OpenUsage provider adapters
 The plugin does not scrape provider UIs itself. It runs one shared
 `herdr-quota --json` request, renders only the normalized fields it needs, and
 refreshes every 60 seconds. OpenUsage provides a shared five-minute cache.
-Pressing any quota key runs `herdr-quota --json --force` to bypass that cache.
+Pressing any quota key runs `herdr-quota --json --force` to bypass that cache and
+sends the focused agent a standing order to spawn and delegate only to the
+selected provider. It does not switch the focused pane; it tells that harness
+how to spend its next round of delegated work. If the provider is unavailable,
+the prompt explicitly asks the harness to report the blocker rather than fall
+back silently.
 
 Runtime dependencies:
 
