@@ -56,6 +56,7 @@ function buildSvg(view: AgentKeyView): string {
   } else {
     const foreground = STATUS_FOREGROUND_COLORS[view.status];
     parts.push(glyph(view.agent, foreground));
+    parts.push(statusBadge(view.status, foreground));
     parts.push(slotBadge(view.slot, foreground));
     if (view.focused === true) {
       parts.push(
@@ -100,12 +101,27 @@ function symbol(text: string, fill: string, fontSize: number): string {
   return `<text x="${KEY_IMAGE_SIZE / 2}" y="${GLYPH_CENTER_Y}" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica, Arial, sans-serif" font-size="${fontSize}" font-weight="600" fill="${fill}">${text}</text>`;
 }
 
+/** A redundant, color-independent state cue for the attention-first fleet view. */
+function statusBadge(status: AgentStatus, foreground: string): string {
+  const badgeX = KEY_IMAGE_SIZE - 24;
+  const badgeY = 24;
+  const badgeFill = foreground;
+  const badgeText = STATUS_COLORS[status];
+  if (status === "working" || status === "idle") {
+    return `<circle cx="${badgeX}" cy="${badgeY}" r="10" fill="${badgeFill}" fill-opacity="0.92" stroke="${badgeText}" stroke-opacity="0.55" stroke-width="2"/><circle cx="${badgeX}" cy="${badgeY}" r="4" fill="${badgeText}"/>`;
+  }
+  const glyph = status === "blocked" ? "!" : status === "done" ? "✓" : "?";
+  return `<circle cx="${badgeX}" cy="${badgeY}" r="11" fill="${badgeFill}" fill-opacity="0.96" stroke="${badgeText}" stroke-opacity="0.55" stroke-width="2"/><text x="${badgeX}" y="${badgeY + 1}" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" font-weight="800" fill="${badgeText}">${glyph}</text>`;
+}
+
 /** 右下のスロット番号。`index` 指定でないキーには出さない。 */
 function slotBadge(slot: number | undefined, fill: string): string {
   if (slot === undefined) {
     return "";
   }
-  return `<text x="${KEY_IMAGE_SIZE - 14}" y="130" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="${fill}" fill-opacity="0.65">${slot}</text>`;
+  const x = KEY_IMAGE_SIZE - 30;
+  const y = KEY_IMAGE_SIZE - 18;
+  return `<rect x="${x - 13}" y="${y - 12}" width="26" height="22" rx="8" fill="#000" fill-opacity="0.28"/><text x="${x}" y="${y + 1}" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="${fill}" fill-opacity="0.9">${slot}</text>`;
 }
 
 function toDataUri(svg: string): string {
