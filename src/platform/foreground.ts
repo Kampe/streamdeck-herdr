@@ -59,6 +59,20 @@ async function wakeDisplay(): Promise<void> {
   await execFileAsync("/usr/bin/caffeinate", ["-u", "-t", "2"], { timeout: 2_500 });
 }
 
+/**
+ * tmux's lock-after-time runs the configured cmatrix command in the client.
+ * Only send Escape when that exact saver is present; never inject a control
+ * key into a live agent just because the terminal has been idle.
+ */
+async function clearTmuxScreensaver(run: OsascriptRunner): Promise<void> {
+  try {
+    await execFileAsync("/usr/bin/pgrep", ["-f", "cmatrix -s -C green"], { timeout: 500 });
+    await run(["-e", 'tell application "System Events" to key code 53']);
+  } catch {
+    // No configured saver, or Automation permission is unavailable.
+  }
+}
+
 /** Bring a supported terminal forward without injecting keys. */
 export async function bringTerminalToFront(
   app: TerminalApp = "iTerm2",
@@ -70,6 +84,7 @@ export async function bringTerminalToFront(
   try {
     await wake();
     await run(["-e", app === "iTerm2" ? iTermScript(match) : simpleTerminalScript(app, match)]);
+    if (app === "iTerm2") await clearTmuxScreensaver(run);
     return true;
   } catch {
     return false;

@@ -60,8 +60,10 @@ page key only browses the fleet. Press an agent key to focus that exact pane.
 On macOS, an Agent key also best-effort wakes the display and activates iTerm2
 after Herdr accepts the focus request. This puts the terminal running tmux/Herdr
 above Stream Deck and other apps without sending keystrokes into the agent. It
-does not bypass a password-protected macOS lock screen; Herdr focus still
-succeeds if iTerm2 is not installed or Automation permission is unavailable.
+also clears the configured tmux `cmatrix` lock only when that saver process is
+actually running. It does not bypass a password-protected macOS lock screen;
+Herdr focus still succeeds if iTerm2 is not installed or Automation permission
+is unavailable.
 
 When focus changes in Herdr—whether from the Stream Deck, terminal, or another
 client—the deck opens the page containing that existing agent. A newly spawned

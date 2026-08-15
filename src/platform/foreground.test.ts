@@ -18,6 +18,9 @@ describe("bringITermToFront", () => {
       const script = run.mock.calls[0]?.[0]?.join("\n") ?? "";
       expect(script).toContain("sessionName contains \"herdr\"");
       expect(script).toContain("sessionName contains \"tmux\"");
+      // No cmatrix process is active in the test environment, so no unlock
+      // keystroke should be injected into the terminal.
+      expect(run).toHaveBeenCalledTimes(1);
     } else {
       expect(result).toBe(false);
       expect(run).not.toHaveBeenCalled();
