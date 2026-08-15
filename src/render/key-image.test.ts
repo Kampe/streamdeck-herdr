@@ -45,9 +45,18 @@ describe("renderAgentKey", () => {
     expect(render({ kind: "agent", status: "unknown", agent: null })).toContain(">?<");
   });
 
-  it("スロット番号を指定すると右上に描き、指定しなければ描かない", () => {
+  it("スロット番号を指定すると右下に描き、指定しなければ描かない", () => {
     expect(render({ kind: "agent", status: "idle", agent: "codex", slot: 3 })).toContain(">3<");
     expect(render({ kind: "agent", status: "idle", agent: "codex" })).not.toContain("text-anchor=\"end\"");
+  });
+
+  it("フォーカス中のエージェントだけに強い枠線を描く", () => {
+    expect(
+      render({ kind: "agent", status: "idle", agent: "codex", focused: true }),
+    ).toContain('stroke="#ffffff" stroke-width="6"');
+    expect(
+      render({ kind: "agent", status: "idle", agent: "codex", focused: false }),
+    ).not.toContain('stroke="#ffffff" stroke-width="6"');
   });
 
   it("空スロットは専用色と破線枠で描く", () => {

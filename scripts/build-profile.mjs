@@ -36,7 +36,7 @@ const PROFILES = [
       ["3,0", ...pagedAgent(4)],
       ["0,1", "page-previous", "Previous Agent Page", {}],
       ["1,1", "page-next", "Next Agent Page", {}],
-      ["2,1", "send-keys", "Send Keys", { binding: "focused", preset: "approve" }],
+      ["2,1", "quota", "Quota", { provider: "codex", pool: "all" }],
       [
         "3,1",
         "prompt",
@@ -46,7 +46,7 @@ const PROFILES = [
     ],
   },
   {
-    id: "6C4BB1A7-9F8E-4D32-A31E-FA24D1575B02",
+    id: "D46C02A9-64BE-43C8-9917-324175B0E603",
     model: "20GAA9902",
     output: "com.github.yuntan.herdr.sdPlugin/profiles/herdr-original.streamDeckProfile",
     keys: [
@@ -60,21 +60,21 @@ const PROFILES = [
       ["2,1", ...pagedAgent(8)],
       ["3,1", "page-next", "Agent Page", {}],
       ["4,1", "pane-close", "Close Pane", {}],
-      ["0,2", "send-keys", "Send Keys", { binding: "focused", preset: "approve" }],
-      ["1,2", "send-keys", "Send Keys", { binding: "focused", preset: "interrupt" }],
+      ["0,2", "quota", "Quota", { provider: "claude", pool: "all" }],
+      ["1,2", "quota", "Quota", { provider: "codex", pool: "all" }],
+      ["2,2", "quota", "Quota", { provider: "antigravity", pool: "all" }],
+      ["3,2", "send-keys", "Send Keys", { binding: "focused", preset: "interrupt" }],
       [
-        "2,2",
+        "4,2",
         "prompt",
         "Send Prompt",
         { binding: "focused", label: "Continue", text: DEFAULT_PROMPT },
       ],
-      ["3,2", "pane-split", "Split Pane", {}],
-      ["4,2", "pane-swap", "Swap Pane", {}],
     ],
   },
 ];
 
-/** タイトルはキー画像の下端に重ねる。manifest の States と揃えておく。 */
+/** タイトルはキー画像の上端に重ねる。manifest の States と揃えておく。 */
 function state() {
   return {
     FFamily: "",

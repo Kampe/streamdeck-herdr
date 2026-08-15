@@ -124,6 +124,16 @@
       "Tooltip": "Hold to close the focused pane.",
       "Controllers": ["Keypad"],
       "States": [{ "Image": "imgs/keys/pane-close", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Quota",
+      "UUID": "com.github.yuntan.herdr.quota",
+      "Icon": "imgs/keys/quota",
+      "Tooltip": "Show live provider quota from OpenUsage; press to force a refresh.",
+      "PropertyInspectorPath": "ui/quota.html",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Image": "imgs/keys/quota", "TitleAlignment": "top", "FontSize": 12 }]
     }
   ]
 }

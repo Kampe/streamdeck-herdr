@@ -33,6 +33,10 @@
     "Name": "ペインを閉じる",
     "Tooltip": "長押しでフォーカス中のペインを閉じます。"
   },
+  "com.github.yuntan.herdr.quota": {
+    "Name": "クォータ",
+    "Tooltip": "OpenUsage のプロバイダークォータを表示します。押すと強制更新します。"
+  },
   "Localization": {
     "Approve": "承認",
     "Reject": "拒否",

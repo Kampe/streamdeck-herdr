@@ -33,6 +33,10 @@
     "Name": "Close Pane",
     "Tooltip": "Hold to close the focused pane."
   },
+  "com.github.yuntan.herdr.quota": {
+    "Name": "Quota",
+    "Tooltip": "Show live provider quota from OpenUsage; press to force a refresh."
+  },
   "Localization": {
     "Approve": "Approve",
     "Reject": "Reject",

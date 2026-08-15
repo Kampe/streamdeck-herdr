@@ -49,6 +49,11 @@ export type PromptSettings = TargetSettings & {
   label?: string;
 };
 
+export type QuotaSettings = {
+  provider?: "claude" | "codex" | "antigravity" | "grok";
+  pool?: "all" | "default" | "fable" | "spark" | "gemini" | "nonGemini";
+};
+
 export type InterruptSettings = TargetSettings & {
   label?: string;
 };

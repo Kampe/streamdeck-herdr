@@ -119,7 +119,13 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
     }
 
     await key.setImage(
-      renderAgentKey({ kind: "agent", status: agent.status, agent: agent.agent, slot }),
+      renderAgentKey({
+        kind: "agent",
+        status: agent.status,
+        agent: agent.agent,
+        slot,
+        focused: agent.focused,
+      }),
     );
     await key.setTitle(resolveSlotTitle(settings, agent, state.snapshot));
   }

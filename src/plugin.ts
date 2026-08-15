@@ -16,10 +16,12 @@ import { AgentSlot } from "./actions/agent-slot.js";
 import { Prompt } from "./actions/prompt.js";
 import { NextAgentPage, PreviousAgentPage } from "./actions/page-navigation.js";
 import { ClosePane, SplitPane, SwapPane } from "./actions/pane-control.js";
+import { Quota } from "./actions/quota.js";
 import { SendKeys } from "./actions/send-keys.js";
 import { DEFAULT_SOCKET_PATH } from "./constants.js";
 import { HerdrStore } from "./herdr/store.js";
 import type { GlobalSettings } from "./settings.js";
+import { QuotaStore } from "./quota/store.js";
 
 const store = new HerdrStore({
   socketPath: DEFAULT_SOCKET_PATH,
@@ -27,6 +29,7 @@ const store = new HerdrStore({
     error === undefined ? streamDeck.logger.info(message) : streamDeck.logger.warn(message, error),
 });
 const pager = new AgentPager(8);
+const quotaStore = new QuotaStore();
 
 streamDeck.actions.registerAction(new AgentSlot(store, pager));
 streamDeck.actions.registerAction(new SendKeys(store));
@@ -36,6 +39,7 @@ streamDeck.actions.registerAction(new NextAgentPage(store, pager));
 streamDeck.actions.registerAction(new SplitPane(store));
 streamDeck.actions.registerAction(new SwapPane(store));
 streamDeck.actions.registerAction(new ClosePane(store));
+streamDeck.actions.registerAction(new Quota(quotaStore));
 
 await streamDeck.connect();
 
@@ -43,6 +47,7 @@ await streamDeck.connect();
 const globalSettings = await streamDeck.settings.getGlobalSettings<GlobalSettings>();
 store.setSocketPath(globalSettings.socketPath ?? DEFAULT_SOCKET_PATH);
 store.start();
+quotaStore.start();
 store.subscribe((state) => pager.clamp(state.status === "online" ? state.snapshot.agents.length : 0));
 
 streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) => {

@@ -24,7 +24,13 @@ export type AgentKeyView =
   /** 接続はできているが、このスロットに対応するエージェントがいない。 */
   | { kind: "empty"; slot?: number }
   /** エージェントがいる。 */
-  | { kind: "agent"; status: AgentStatus; agent: string | null; slot?: number };
+  | {
+      kind: "agent";
+      status: AgentStatus;
+      agent: string | null;
+      slot?: number;
+      focused?: boolean;
+    };
 
 /** グリフを描く領域の一辺（px）。上端のタイトルに重ならないよう下寄せに置く。 */
 const GLYPH_SIZE = 62;
@@ -51,6 +57,11 @@ function buildSvg(view: AgentKeyView): string {
     const foreground = STATUS_FOREGROUND_COLORS[view.status];
     parts.push(glyph(view.agent, foreground));
     parts.push(slotBadge(view.slot, foreground));
+    if (view.focused === true) {
+      parts.push(
+        `<rect x="5" y="5" width="${KEY_IMAGE_SIZE - 10}" height="${KEY_IMAGE_SIZE - 10}" rx="15" fill="none" stroke="#ffffff" stroke-width="6"/>`,
+      );
+    }
   }
 
   parts.push("</svg>");

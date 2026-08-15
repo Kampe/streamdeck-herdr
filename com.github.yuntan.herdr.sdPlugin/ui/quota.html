@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>__MSG_quota__</title>
+    <script src="lib/sdpi-components.js"></script>
+    <script src="lib/i18n.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="__MSG_provider__">
+      <sdpi-select setting="provider" default="codex">
+        <option value="claude">Claude</option>
+        <option value="codex">Codex</option>
+        <option value="antigravity">Antigravity</option>
+        <option value="grok">Grok</option>
+      </sdpi-select>
+    </sdpi-item>
+
+    <sdpi-item label="__MSG_pool__">
+      <sdpi-select setting="pool" default="all">
+        <option value="all">__MSG_allPools__</option>
+        <option value="default">__MSG_defaultPool__</option>
+        <option value="fable">Fable</option>
+        <option value="spark">Spark</option>
+        <option value="gemini">Gemini</option>
+        <option value="nonGemini">__MSG_nonGemini__</option>
+      </sdpi-select>
+    </sdpi-item>
+  </body>
+</html>
