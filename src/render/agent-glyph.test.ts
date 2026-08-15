@@ -15,6 +15,11 @@ describe("agentGlyph", () => {
     expect(agentGlyph("CLAUDE", "#fff")).toBe(agentGlyph("claude", "#fff"));
   });
 
+  it("uses the Gemini flash for Herdr's agy aliases", () => {
+    expect(agentGlyph("agy", "#fff")).toBe(agentGlyph("gemini", "#fff"));
+    expect(agentGlyph("antigravity", "#fff")).toBe(agentGlyph("gemini", "#fff"));
+  });
+
   it("穴あきのロゴは evenodd で塗る", () => {
     expect(agentGlyph("codex", "#fff")).toContain('fill-rule="evenodd"');
     expect(agentGlyph("claude", "#fff")).not.toContain("fill-rule");

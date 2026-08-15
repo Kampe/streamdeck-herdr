@@ -48,7 +48,10 @@ const LOGOS: Record<string, LogoPath> = {
  */
 export function agentGlyph(agent: string | null, color: string): string {
   const key = (agent ?? "").toLowerCase();
-  const logo = LOGOS[key];
+  // Herdr reports Antigravity as `agy` in pane metadata, while settings and
+  // quota use the longer `antigravity` name. Both are Gemini-backed agents.
+  const logoKey = key === "agy" || key === "antigravity" ? "gemini" : key;
+  const logo = LOGOS[logoKey];
   if (logo !== undefined) {
     return logoPath(logo, color);
   }
