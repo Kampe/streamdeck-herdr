@@ -2,7 +2,32 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const ITERM_ACTIVATE_SCRIPT = 'tell application "iTerm2" to activate';
+const ITERM_ACTIVATE_SCRIPT = `tell application "iTerm2"
+  set targetWindow to missing value
+  set targetTab to missing value
+  set targetSession to missing value
+  repeat with candidateWindow in windows
+    repeat with candidateTab in tabs of candidateWindow
+      repeat with candidateSession in sessions of candidateTab
+        set sessionName to name of candidateSession
+        if sessionName contains "herdr" or sessionName contains "tmux" then
+          set targetWindow to candidateWindow
+          set targetTab to candidateTab
+          set targetSession to candidateSession
+          exit repeat
+        end if
+      end repeat
+      if targetSession is not missing value then exit repeat
+    end repeat
+    if targetSession is not missing value then exit repeat
+  end repeat
+  if targetSession is not missing value then
+    set index of targetWindow to 1
+    set selected tab of targetWindow to targetTab
+    set current session of targetTab to targetSession
+  end if
+  activate
+end tell`;
 
 export type OsascriptRunner = (args: readonly string[]) => Promise<void>;
 
@@ -27,4 +52,3 @@ export async function bringITermToFront(run: OsascriptRunner = runOsascript): Pr
     return false;
   }
 }
-

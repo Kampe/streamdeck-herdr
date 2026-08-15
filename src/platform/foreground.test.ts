@@ -4,15 +4,18 @@ import { bringITermToFront } from "./foreground.js";
 
 describe("bringITermToFront", () => {
   it("activates iTerm2 through osascript", async () => {
-    const run = vi.fn(async () => undefined);
+    const run = vi.fn(async (_args: readonly string[]) => undefined);
     const result = await bringITermToFront(run);
 
     if (process.platform === "darwin") {
       expect(result).toBe(true);
       expect(run).toHaveBeenCalledWith([
         "-e",
-        'tell application "iTerm2" to activate',
+        expect.stringContaining('tell application "iTerm2"'),
       ]);
+      const script = run.mock.calls[0]?.[0]?.join("\n") ?? "";
+      expect(script).toContain("sessionName contains \"herdr\"");
+      expect(script).toContain("sessionName contains \"tmux\"");
     } else {
       expect(result).toBe(false);
       expect(run).not.toHaveBeenCalled();
@@ -20,7 +23,7 @@ describe("bringITermToFront", () => {
   });
 
   it("does not fail the action when activation is unavailable", async () => {
-    const run = vi.fn(async () => {
+    const run = vi.fn(async (_args: readonly string[]) => {
       throw new Error("not authorized");
     });
     const result = await bringITermToFront(run);
@@ -28,4 +31,3 @@ describe("bringITermToFront", () => {
     expect(result).toBe(false);
   });
 });
-
