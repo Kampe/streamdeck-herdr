@@ -29,14 +29,14 @@ const OUTPUT = "com.github.yuntan.herdr.sdPlugin/profiles/herdr-neo.streamDeckPr
  * 座標は `"列,段"`（0 始まり）。
  */
 const KEYS = [
-  ["0,0", "agent-slot", "エージェント", { binding: "index", index: 1 }],
-  ["1,0", "agent-slot", "エージェント", { binding: "index", index: 2 }],
-  ["2,0", "agent-slot", "エージェント", { binding: "index", index: 3 }],
-  ["3,0", "agent-slot", "エージェント", { binding: "index", index: 4 }],
-  ["0,1", "send-keys", "キー送信", { binding: "focused", preset: "approve" }],
-  ["1,1", "send-keys", "キー送信", { binding: "focused", preset: "reject" }],
-  ["2,1", "send-keys", "キー送信", { binding: "focused", preset: "interrupt" }],
-  ["3,1", "prompt", "プロンプト送信", { binding: "focused", text: "" }],
+  ["0,0", "agent-slot", "Agent", { binding: "index", index: 1 }],
+  ["1,0", "agent-slot", "Agent", { binding: "index", index: 2 }],
+  ["2,0", "agent-slot", "Agent", { binding: "index", index: 3 }],
+  ["3,0", "agent-slot", "Agent", { binding: "index", index: 4 }],
+  ["0,1", "send-keys", "Send Keys", { binding: "focused", preset: "approve" }],
+  ["1,1", "send-keys", "Send Keys", { binding: "focused", preset: "reject" }],
+  ["2,1", "send-keys", "Send Keys", { binding: "focused", preset: "interrupt" }],
+  ["3,1", "prompt", "Send Prompt", { binding: "focused", text: "" }],
 ];
 
 /** タイトルはキー画像の下端に重ねる。manifest の States と揃えておく。 */

@@ -2,7 +2,7 @@
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "Name": "herdr",
   "Author": "yuntan",
-  "Description": "herdr のエージェントの状態を表示し、フォーカス・承認/拒否・中断・プロンプト投入を Stream Deck から行います。",
+  "Description": "Monitor and control Herdr agents from Stream Deck: focus, approve, reject, interrupt, and send prompts.",
   "Icon": "imgs/plugin-icon",
   "UUID": "com.github.yuntan.herdr",
   "Version": "0.1.0.0",
@@ -32,10 +32,10 @@
   ],
   "Actions": [
     {
-      "Name": "エージェント",
+      "Name": "Agent",
       "UUID": "com.github.yuntan.herdr.agent-slot",
       "Icon": "imgs/actions/agent-slot",
-      "Tooltip": "herdr のエージェント 1 つの状態を表示し、押すとフォーカスします。",
+      "Tooltip": "Show one Herdr agent's status and focus it when pressed.",
       "PropertyInspectorPath": "ui/agent-slot.html",
       "Controllers": ["Keypad"],
       "DisableAutomaticStates": true,
@@ -48,10 +48,10 @@
       ]
     },
     {
-      "Name": "キー送信",
+      "Name": "Send Keys",
       "UUID": "com.github.yuntan.herdr.send-keys",
       "Icon": "imgs/actions/send-keys",
-      "Tooltip": "対象エージェントにキー列（承認・拒否・中断など）を送ります。",
+      "Tooltip": "Send keys to an agent, including approve, reject, and interrupt.",
       "PropertyInspectorPath": "ui/send-keys.html",
       "Controllers": ["Keypad"],
       "DisableAutomaticStates": true,
@@ -64,10 +64,10 @@
       ]
     },
     {
-      "Name": "プロンプト送信",
+      "Name": "Send Prompt",
       "UUID": "com.github.yuntan.herdr.prompt",
       "Icon": "imgs/actions/prompt",
-      "Tooltip": "対象エージェントに定型プロンプトを投入します。",
+      "Tooltip": "Send a saved prompt to an agent.",
       "PropertyInspectorPath": "ui/prompt.html",
       "Controllers": ["Keypad"],
       "DisableAutomaticStates": true,

@@ -11,13 +11,13 @@ import { TargetAction } from "./target-action.js";
 @action({ UUID: ACTION_UUID_PROMPT })
 export class Prompt extends TargetAction<PromptSettings> {
   protected override defaultLabel(): string {
-    return "プロンプト";
+    return "Prompt";
   }
 
   protected override async perform(target: string, settings: PromptSettings): Promise<void> {
     const text = settings.text ?? "";
     if (text.trim() === "") {
-      throw new Error("送信するプロンプトが設定されていません");
+      throw new Error("No prompt is configured to send");
     }
     // `wait` は指定しない。エージェントの応答完了まで待つとキーが固まるため。
     await this.store.request("agent.prompt", { target, text });

@@ -2,35 +2,35 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>キー送信</title>
+    <title>Send Keys</title>
     <script src="lib/sdpi-components.js"></script>
     <script src="lib/toggle.js"></script>
   </head>
   <body>
-    <sdpi-item label="送るキー">
+    <sdpi-item label="Keys">
       <sdpi-select id="preset" setting="preset" default="approve">
-        <option value="approve">承認（Enter）</option>
-        <option value="reject">拒否（Esc）</option>
-        <option value="yes">はい（y + Enter）</option>
-        <option value="no">いいえ（n + Enter）</option>
-        <option value="interrupt">中断（Esc）</option>
-        <option value="custom">自由入力</option>
+        <option value="approve">Approve (Enter)</option>
+        <option value="reject">Reject (Esc)</option>
+        <option value="yes">Yes (y + Enter)</option>
+        <option value="no">No (n + Enter)</option>
+        <option value="interrupt">Interrupt (Esc)</option>
+        <option value="custom">Custom</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-keys" label="キー列" hidden>
-      <sdpi-textfield setting="keys" placeholder="例: 2 Enter"></sdpi-textfield>
+    <sdpi-item id="row-keys" label="Key sequence" hidden>
+      <sdpi-textfield setting="keys" placeholder="Example: 2 Enter"></sdpi-textfield>
     </sdpi-item>
 
-    <sdpi-item label="対象">
+    <sdpi-item label="Target">
       <sdpi-select id="binding" setting="binding" default="focused">
-        <option value="focused">フォーカス中のエージェント</option>
-        <option value="index">順番で指定</option>
-        <option value="session">エージェントを固定</option>
+        <option value="focused">Focused agent</option>
+        <option value="index">Agent position</option>
+        <option value="session">Pinned agent</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-index" label="順番" hidden>
+    <sdpi-item id="row-index" label="Position" hidden>
       <sdpi-range
         setting="index"
         value-type="number"
@@ -42,22 +42,22 @@
       ></sdpi-range>
     </sdpi-item>
 
-    <sdpi-item id="row-session" label="エージェント" hidden>
+    <sdpi-item id="row-session" label="Agent" hidden>
       <sdpi-select
         setting="sessionId"
         datasource="getAgents"
-        loading="読み込み中…"
-        placeholder="エージェントを選択"
+        loading="Loading…"
+        placeholder="Select an agent"
         show-refresh
         hot-reload
       ></sdpi-select>
     </sdpi-item>
 
-    <sdpi-item label="キーの表示名">
-      <sdpi-textfield setting="label" maxlength="12" placeholder="未入力ならプリセット名"></sdpi-textfield>
+    <sdpi-item label="Button label">
+      <sdpi-textfield setting="label" maxlength="12" placeholder="Uses preset name when empty"></sdpi-textfield>
     </sdpi-item>
 
-    <sdpi-item label="ソケットパス">
+    <sdpi-item label="Socket path">
       <sdpi-textfield
         setting="socketPath"
         global

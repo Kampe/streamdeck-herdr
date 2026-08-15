@@ -2,19 +2,19 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>エージェント</title>
+    <title>Agent</title>
     <script src="lib/sdpi-components.js"></script>
     <script src="lib/toggle.js"></script>
   </head>
   <body>
-    <sdpi-item label="割り当て">
+    <sdpi-item label="Assignment">
       <sdpi-select id="binding" setting="binding" default="index">
-        <option value="index">順番で指定</option>
-        <option value="session">エージェントを固定</option>
+        <option value="index">Agent position</option>
+        <option value="session">Pin an agent</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-index" label="順番" hidden>
+    <sdpi-item id="row-index" label="Position" hidden>
       <sdpi-range
         setting="index"
         value-type="number"
@@ -26,30 +26,30 @@
       ></sdpi-range>
     </sdpi-item>
 
-    <sdpi-item id="row-session" label="エージェント" hidden>
+    <sdpi-item id="row-session" label="Agent" hidden>
       <sdpi-select
         setting="sessionId"
         datasource="getAgents"
-        loading="読み込み中…"
-        placeholder="エージェントを選択"
+        loading="Loading…"
+        placeholder="Select an agent"
         show-refresh
         hot-reload
       ></sdpi-select>
     </sdpi-item>
 
-    <sdpi-item label="ラベル">
+    <sdpi-item label="Label">
       <sdpi-select id="labelSource" setting="labelSource" default="workspace">
-        <option value="workspace">ワークスペース名</option>
-        <option value="title">端末タイトル</option>
-        <option value="custom">固定文字列</option>
+        <option value="workspace">Workspace name</option>
+        <option value="title">Terminal title</option>
+        <option value="custom">Custom text</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-custom-label" label="固定文字列" hidden>
+    <sdpi-item id="row-custom-label" label="Custom text" hidden>
       <sdpi-textfield setting="customLabel" maxlength="24"></sdpi-textfield>
     </sdpi-item>
 
-    <sdpi-item label="ソケットパス">
+    <sdpi-item label="Socket path">
       <sdpi-textfield
         setting="socketPath"
         global

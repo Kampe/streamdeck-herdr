@@ -11,12 +11,12 @@ import { TargetAction } from "./target-action.js";
 
 /** プリセットごとの既定タイトル。 */
 const PRESET_LABELS: Record<KeyPreset, string> = {
-  approve: "承認",
-  reject: "拒否",
-  yes: "はい",
-  no: "いいえ",
-  interrupt: "中断",
-  custom: "キー送信",
+  approve: "Approve",
+  reject: "Reject",
+  yes: "Yes",
+  no: "No",
+  interrupt: "Interrupt",
+  custom: "Send Keys",
 };
 
 /** プリセットごとのキー画像。何を送るキーなのか一目で分かるようにする。 */
@@ -46,7 +46,7 @@ export class SendKeys extends TargetAction<SendKeysSettings> {
   protected override async perform(target: string, settings: SendKeysSettings): Promise<void> {
     const keys = resolveKeys(settings.preset, settings.keys);
     if (keys.length === 0) {
-      throw new Error("送信するキーが設定されていません");
+      throw new Error("No keys are configured to send");
     }
     await this.store.request("agent.send_keys", { target, keys });
   }

@@ -2,30 +2,30 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>プロンプト送信</title>
+    <title>Send Prompt</title>
     <script src="lib/sdpi-components.js"></script>
     <script src="lib/toggle.js"></script>
   </head>
   <body>
-    <sdpi-item label="プロンプト">
+    <sdpi-item label="Prompt">
       <sdpi-textarea
         setting="text"
         rows="4"
         maxlength="500"
         showlength
-        placeholder="例: テストを実行して結果を教えて"
+        placeholder="Example: Run the tests and report the result"
       ></sdpi-textarea>
     </sdpi-item>
 
-    <sdpi-item label="対象">
+    <sdpi-item label="Target">
       <sdpi-select id="binding" setting="binding" default="focused">
-        <option value="focused">フォーカス中のエージェント</option>
-        <option value="index">順番で指定</option>
-        <option value="session">エージェントを固定</option>
+        <option value="focused">Focused agent</option>
+        <option value="index">Agent position</option>
+        <option value="session">Pinned agent</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-index" label="順番" hidden>
+    <sdpi-item id="row-index" label="Position" hidden>
       <sdpi-range
         setting="index"
         value-type="number"
@@ -37,22 +37,22 @@
       ></sdpi-range>
     </sdpi-item>
 
-    <sdpi-item id="row-session" label="エージェント" hidden>
+    <sdpi-item id="row-session" label="Agent" hidden>
       <sdpi-select
         setting="sessionId"
         datasource="getAgents"
-        loading="読み込み中…"
-        placeholder="エージェントを選択"
+        loading="Loading…"
+        placeholder="Select an agent"
         show-refresh
         hot-reload
       ></sdpi-select>
     </sdpi-item>
 
-    <sdpi-item label="キーの表示名">
-      <sdpi-textfield setting="label" maxlength="12" placeholder="プロンプト"></sdpi-textfield>
+    <sdpi-item label="Button label">
+      <sdpi-textfield setting="label" maxlength="12" placeholder="Prompt"></sdpi-textfield>
     </sdpi-item>
 
-    <sdpi-item label="ソケットパス">
+    <sdpi-item label="Socket path">
       <sdpi-textfield
         setting="socketPath"
         global
