@@ -19,6 +19,7 @@ import type { AgentPager } from "../agent-pager.js";
 import { ACTION_UUID_AGENT_SLOT } from "../constants.js";
 import { resolveAgent } from "../herdr/target.js";
 import type { HerdrStore } from "../herdr/store.js";
+import { bringITermToFront } from "../platform/foreground.js";
 import { renderAgentKey } from "../render/key-image.js";
 import { resolveSlotTitle } from "../render/labels.js";
 import type { AgentSlotSettings } from "../settings.js";
@@ -92,6 +93,7 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
 
     try {
       await this.#store.request("agent.focus", { target });
+      await bringITermToFront();
     } catch (error) {
       streamDeck.logger.error("エージェントのフォーカスに失敗しました", error);
       await ev.action.showAlert();
