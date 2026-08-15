@@ -2,19 +2,20 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Agent</title>
+    <title>__MSG_agent__</title>
     <script src="lib/sdpi-components.js"></script>
+    <script src="lib/i18n.js"></script>
     <script src="lib/toggle.js"></script>
   </head>
   <body>
-    <sdpi-item label="Assignment">
+    <sdpi-item label="__MSG_assignment__">
       <sdpi-select id="binding" setting="binding" default="index">
-        <option value="index">Agent position</option>
-        <option value="session">Pin an agent</option>
+        <option value="index">__MSG_agentPosition__</option>
+        <option value="session">__MSG_pinAgent__</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-index" label="Position" hidden>
+    <sdpi-item id="row-index" label="__MSG_position__" hidden>
       <sdpi-range
         setting="index"
         value-type="number"
@@ -26,30 +27,30 @@
       ></sdpi-range>
     </sdpi-item>
 
-    <sdpi-item id="row-session" label="Agent" hidden>
+    <sdpi-item id="row-session" label="__MSG_agent__" hidden>
       <sdpi-select
         setting="sessionId"
         datasource="getAgents"
-        loading="Loading…"
-        placeholder="Select an agent"
+        loading="__MSG_loading__"
+        placeholder="__MSG_selectAgent__"
         show-refresh
         hot-reload
       ></sdpi-select>
     </sdpi-item>
 
-    <sdpi-item label="Label">
+    <sdpi-item label="__MSG_label__">
       <sdpi-select id="labelSource" setting="labelSource" default="workspace">
-        <option value="workspace">Workspace name</option>
-        <option value="title">Terminal title</option>
-        <option value="custom">Custom text</option>
+        <option value="workspace">__MSG_workspaceName__</option>
+        <option value="title">__MSG_terminalTitle__</option>
+        <option value="custom">__MSG_customText__</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-custom-label" label="Custom text" hidden>
+    <sdpi-item id="row-custom-label" label="__MSG_customText__" hidden>
       <sdpi-textfield setting="customLabel" maxlength="24"></sdpi-textfield>
     </sdpi-item>
 
-    <sdpi-item label="Socket path">
+    <sdpi-item label="__MSG_socketPath__">
       <sdpi-textfield
         setting="socketPath"
         global

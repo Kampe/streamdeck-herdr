@@ -1,0 +1,27 @@
+{
+  "Name": "herdr",
+  "Description": "Monitor and control Herdr agents from Stream Deck: focus, approve, reject, interrupt, and send prompts.",
+  "com.github.yuntan.herdr.agent-slot": {
+    "Name": "Agent",
+    "Tooltip": "Show one Herdr agent's status and focus it when pressed."
+  },
+  "com.github.yuntan.herdr.send-keys": {
+    "Name": "Send Keys",
+    "Tooltip": "Send keys to an agent, including approve, reject, and interrupt."
+  },
+  "com.github.yuntan.herdr.prompt": {
+    "Name": "Send Prompt",
+    "Tooltip": "Send a saved prompt to an agent."
+  },
+  "Localization": {
+    "Approve": "Approve",
+    "Reject": "Reject",
+    "Yes": "Yes",
+    "No": "No",
+    "Interrupt": "Interrupt",
+    "Send Keys": "Send Keys",
+    "Prompt": "Prompt",
+    "No keys are configured to send": "No keys are configured to send",
+    "No prompt is configured to send": "No prompt is configured to send"
+  }
+}

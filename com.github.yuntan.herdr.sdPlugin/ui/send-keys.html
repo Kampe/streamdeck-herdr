@@ -2,35 +2,36 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Send Keys</title>
+    <title>__MSG_sendKeys__</title>
     <script src="lib/sdpi-components.js"></script>
+    <script src="lib/i18n.js"></script>
     <script src="lib/toggle.js"></script>
   </head>
   <body>
-    <sdpi-item label="Keys">
+    <sdpi-item label="__MSG_keys__">
       <sdpi-select id="preset" setting="preset" default="approve">
-        <option value="approve">Approve (Enter)</option>
-        <option value="reject">Reject (Esc)</option>
-        <option value="yes">Yes (y + Enter)</option>
-        <option value="no">No (n + Enter)</option>
-        <option value="interrupt">Interrupt (Esc)</option>
-        <option value="custom">Custom</option>
+        <option value="approve">__MSG_approve__</option>
+        <option value="reject">__MSG_reject__</option>
+        <option value="yes">__MSG_yes__</option>
+        <option value="no">__MSG_no__</option>
+        <option value="interrupt">__MSG_interrupt__</option>
+        <option value="custom">__MSG_custom__</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-keys" label="Key sequence" hidden>
-      <sdpi-textfield setting="keys" placeholder="Example: 2 Enter"></sdpi-textfield>
+    <sdpi-item id="row-keys" label="__MSG_keySequence__" hidden>
+      <sdpi-textfield setting="keys" placeholder="__MSG_exampleKeys__"></sdpi-textfield>
     </sdpi-item>
 
-    <sdpi-item label="Target">
+    <sdpi-item label="__MSG_target__">
       <sdpi-select id="binding" setting="binding" default="focused">
-        <option value="focused">Focused agent</option>
-        <option value="index">Agent position</option>
-        <option value="session">Pinned agent</option>
+        <option value="focused">__MSG_focusedAgent__</option>
+        <option value="index">__MSG_agentPosition__</option>
+        <option value="session">__MSG_pinnedAgent__</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-index" label="Position" hidden>
+    <sdpi-item id="row-index" label="__MSG_position__" hidden>
       <sdpi-range
         setting="index"
         value-type="number"
@@ -42,22 +43,22 @@
       ></sdpi-range>
     </sdpi-item>
 
-    <sdpi-item id="row-session" label="Agent" hidden>
+    <sdpi-item id="row-session" label="__MSG_agent__" hidden>
       <sdpi-select
         setting="sessionId"
         datasource="getAgents"
-        loading="Loading…"
-        placeholder="Select an agent"
+        loading="__MSG_loading__"
+        placeholder="__MSG_selectAgent__"
         show-refresh
         hot-reload
       ></sdpi-select>
     </sdpi-item>
 
-    <sdpi-item label="Button label">
-      <sdpi-textfield setting="label" maxlength="12" placeholder="Uses preset name when empty"></sdpi-textfield>
+    <sdpi-item label="__MSG_buttonLabel__">
+      <sdpi-textfield setting="label" maxlength="12" placeholder="__MSG_presetFallback__"></sdpi-textfield>
     </sdpi-item>
 
-    <sdpi-item label="Socket path">
+    <sdpi-item label="__MSG_socketPath__">
       <sdpi-textfield
         setting="socketPath"
         global

@@ -1,0 +1,27 @@
+{
+  "Name": "herdr",
+  "Description": "herdr のエージェントの状態を表示し、フォーカス・承認/拒否・中断・プロンプト投入を Stream Deck から行います。",
+  "com.github.yuntan.herdr.agent-slot": {
+    "Name": "エージェント",
+    "Tooltip": "herdr のエージェント 1 つの状態を表示し、押すとフォーカスします。"
+  },
+  "com.github.yuntan.herdr.send-keys": {
+    "Name": "キー送信",
+    "Tooltip": "対象エージェントにキー列（承認・拒否・中断など）を送ります。"
+  },
+  "com.github.yuntan.herdr.prompt": {
+    "Name": "プロンプト送信",
+    "Tooltip": "対象エージェントに定型プロンプトを投入します。"
+  },
+  "Localization": {
+    "Approve": "承認",
+    "Reject": "拒否",
+    "Yes": "はい",
+    "No": "いいえ",
+    "Interrupt": "中断",
+    "Send Keys": "キー送信",
+    "Prompt": "プロンプト",
+    "No keys are configured to send": "送信するキーが設定されていません",
+    "No prompt is configured to send": "送信するプロンプトが設定されていません"
+  }
+}

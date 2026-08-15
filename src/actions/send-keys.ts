@@ -2,7 +2,7 @@
  * キー送信キー。承認 / 拒否などのキー列を対象エージェントへ送る。
  */
 
-import { action } from "@elgato/streamdeck";
+import streamDeck, { action } from "@elgato/streamdeck";
 
 import { ACTION_UUID_SEND_KEYS } from "../constants.js";
 import { resolveKeys } from "../herdr/keys.js";
@@ -10,7 +10,7 @@ import type { KeyPreset, SendKeysSettings } from "../settings.js";
 import { TargetAction } from "./target-action.js";
 
 /** プリセットごとの既定タイトル。 */
-const PRESET_LABELS: Record<KeyPreset, string> = {
+const PRESET_LABEL_KEYS: Record<KeyPreset, string> = {
   approve: "Approve",
   reject: "Reject",
   yes: "Yes",
@@ -32,11 +32,13 @@ const PRESET_IMAGES: Record<KeyPreset, string> = {
 @action({ UUID: ACTION_UUID_SEND_KEYS })
 export class SendKeys extends TargetAction<SendKeysSettings> {
   protected override defaultLabel(): string {
-    return PRESET_LABELS.approve;
+    return streamDeck.i18n.translate(PRESET_LABEL_KEYS.approve);
   }
 
   protected override label(settings: SendKeysSettings): string {
-    return settings.label ?? PRESET_LABELS[settings.preset ?? "approve"];
+    return (
+      settings.label ?? streamDeck.i18n.translate(PRESET_LABEL_KEYS[settings.preset ?? "approve"])
+    );
   }
 
   protected override image(settings: SendKeysSettings): string {
@@ -46,7 +48,7 @@ export class SendKeys extends TargetAction<SendKeysSettings> {
   protected override async perform(target: string, settings: SendKeysSettings): Promise<void> {
     const keys = resolveKeys(settings.preset, settings.keys);
     if (keys.length === 0) {
-      throw new Error("No keys are configured to send");
+      throw new Error(streamDeck.i18n.translate("No keys are configured to send"));
     }
     await this.store.request("agent.send_keys", { target, keys });
   }

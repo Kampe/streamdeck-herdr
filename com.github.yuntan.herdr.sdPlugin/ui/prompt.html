@@ -2,30 +2,31 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Send Prompt</title>
+    <title>__MSG_sendPrompt__</title>
     <script src="lib/sdpi-components.js"></script>
+    <script src="lib/i18n.js"></script>
     <script src="lib/toggle.js"></script>
   </head>
   <body>
-    <sdpi-item label="Prompt">
+    <sdpi-item label="__MSG_prompt__">
       <sdpi-textarea
         setting="text"
         rows="4"
         maxlength="500"
         showlength
-        placeholder="Example: Run the tests and report the result"
+        placeholder="__MSG_examplePrompt__"
       ></sdpi-textarea>
     </sdpi-item>
 
-    <sdpi-item label="Target">
+    <sdpi-item label="__MSG_target__">
       <sdpi-select id="binding" setting="binding" default="focused">
-        <option value="focused">Focused agent</option>
-        <option value="index">Agent position</option>
-        <option value="session">Pinned agent</option>
+        <option value="focused">__MSG_focusedAgent__</option>
+        <option value="index">__MSG_agentPosition__</option>
+        <option value="session">__MSG_pinnedAgent__</option>
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item id="row-index" label="Position" hidden>
+    <sdpi-item id="row-index" label="__MSG_position__" hidden>
       <sdpi-range
         setting="index"
         value-type="number"
@@ -37,22 +38,22 @@
       ></sdpi-range>
     </sdpi-item>
 
-    <sdpi-item id="row-session" label="Agent" hidden>
+    <sdpi-item id="row-session" label="__MSG_agent__" hidden>
       <sdpi-select
         setting="sessionId"
         datasource="getAgents"
-        loading="Loading…"
-        placeholder="Select an agent"
+        loading="__MSG_loading__"
+        placeholder="__MSG_selectAgent__"
         show-refresh
         hot-reload
       ></sdpi-select>
     </sdpi-item>
 
-    <sdpi-item label="Button label">
-      <sdpi-textfield setting="label" maxlength="12" placeholder="Prompt"></sdpi-textfield>
+    <sdpi-item label="__MSG_buttonLabel__">
+      <sdpi-textfield setting="label" maxlength="12" placeholder="__MSG_prompt__"></sdpi-textfield>
     </sdpi-item>
 
-    <sdpi-item label="Socket path">
+    <sdpi-item label="__MSG_socketPath__">
       <sdpi-textfield
         setting="socketPath"
         global
