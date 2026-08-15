@@ -1,6 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { AgentPager } from "./agent-pager.js";
+import type { SessionSnapshot } from "./herdr/types.js";
+
+const snapshot: SessionSnapshot = {
+  focusedPaneId: "w1:p1",
+  workspaces: [
+    { workspaceId: "w1", label: "one", number: 1 },
+    { workspaceId: "w2", label: "two", number: 2 },
+  ],
+  agents: [
+    { paneId: "w1:p1", workspaceId: "w1", tabId: "w1:t1", agent: "codex", sessionId: "a", status: "idle", title: "", cwd: "", focused: true },
+    { paneId: "w1:p2", workspaceId: "w1", tabId: "w1:t2", agent: "claude", sessionId: "b", status: "blocked", title: "", cwd: "", focused: false },
+    { paneId: "w2:p1", workspaceId: "w2", tabId: "w2:t1", agent: "grok", sessionId: "c", status: "working", title: "", cwd: "", focused: false },
+  ],
+};
 
 describe("AgentPager", () => {
   it("maps page-local slots to one-based absolute agent indexes", () => {
@@ -51,5 +65,17 @@ describe("AgentPager", () => {
     unsubscribe();
     pager.next(17);
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it("filters attention, idle, favorites, and workspace views", () => {
+    const pager = new AgentPager();
+    pager.setView({ mode: "attention" });
+    expect(pager.visibleAgents(snapshot).map((agent) => agent.sessionId)).toEqual(["b"]);
+    pager.setView({ mode: "idle" });
+    expect(pager.visibleAgents(snapshot).map((agent) => agent.sessionId)).toEqual(["a"]);
+    pager.setView({ mode: "favorites" });
+    expect(pager.visibleAgents(snapshot, new Set(["c"])).map((agent) => agent.sessionId)).toEqual(["c"]);
+    pager.setView({ mode: "workspace", workspaceId: "w1" });
+    expect(pager.visibleAgents(snapshot).map((agent) => agent.sessionId)).toEqual(["a", "b"]);
   });
 });

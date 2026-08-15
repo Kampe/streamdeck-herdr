@@ -5,6 +5,8 @@
  */
 
 import streamDeck from "@elgato/streamdeck";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 import { AgentPager } from "./agent-pager.js";
 import {
@@ -13,6 +15,14 @@ import {
   isAgentDataSourceRequest,
 } from "./actions/agent-datasource.js";
 import { AgentSlot } from "./actions/agent-slot.js";
+import { AgentQueue } from "./actions/agent-queue.js";
+import { AgentView } from "./actions/agent-view.js";
+import { WorkspacePage } from "./actions/workspace-page.js";
+import { Favorite } from "./actions/favorite.js";
+import { Health } from "./actions/health.js";
+import { Recovery } from "./actions/recovery.js";
+import { Session } from "./actions/session.js";
+import { Terminal } from "./actions/terminal.js";
 import { Prompt } from "./actions/prompt.js";
 import { NextAgentPage, PreviousAgentPage } from "./actions/page-navigation.js";
 import { ClosePane, SplitPane, SwapPane } from "./actions/pane-control.js";
@@ -20,9 +30,10 @@ import { Quota } from "./actions/quota.js";
 import { SendKeys } from "./actions/send-keys.js";
 import { DEFAULT_SOCKET_PATH } from "./constants.js";
 import { HerdrStore } from "./herdr/store.js";
-import { sortAgents } from "./herdr/target.js";
 import type { GlobalSettings } from "./settings.js";
 import { QuotaStore } from "./quota/store.js";
+import { FavoritesStore } from "./favorites.js";
+import { bringTerminalToFront } from "./platform/foreground.js";
 
 const store = new HerdrStore({
   socketPath: DEFAULT_SOCKET_PATH,
@@ -31,22 +42,49 @@ const store = new HerdrStore({
 });
 const pager = new AgentPager(8);
 const quotaStore = new QuotaStore();
+const favorites = new FavoritesStore();
+let pluginSettings: GlobalSettings = {};
 
-streamDeck.actions.registerAction(new AgentSlot(store, pager));
+const persistSettings = async (patch: Partial<GlobalSettings>): Promise<void> => {
+  pluginSettings = { ...pluginSettings, ...patch };
+  await streamDeck.settings.setGlobalSettings(pluginSettings);
+};
+const persistFavorites = (ids: string[]): Promise<void> => persistSettings({ favoriteSessions: ids });
+const socketPathFor = (settings: GlobalSettings): string =>
+  settings.socketPath ?? (settings.sessionName === undefined
+    ? DEFAULT_SOCKET_PATH
+    : join(homedir(), ".config", "herdr", "sessions", settings.sessionName, "herdr.sock"));
+
+streamDeck.actions.registerAction(new AgentSlot(
+  store,
+  pager,
+  () => favorites.ids,
+  () => bringTerminalToFront(pluginSettings.terminalApp ?? "iTerm2", pluginSettings.terminalMatch ?? "herdr"),
+));
 streamDeck.actions.registerAction(new SendKeys(store));
 streamDeck.actions.registerAction(new Prompt(store));
-streamDeck.actions.registerAction(new PreviousAgentPage(store, pager));
-streamDeck.actions.registerAction(new NextAgentPage(store, pager));
+streamDeck.actions.registerAction(new PreviousAgentPage(store, pager, () => favorites.ids));
+streamDeck.actions.registerAction(new NextAgentPage(store, pager, () => favorites.ids));
 streamDeck.actions.registerAction(new SplitPane(store));
 streamDeck.actions.registerAction(new SwapPane(store));
 streamDeck.actions.registerAction(new ClosePane(store));
 streamDeck.actions.registerAction(new Quota(quotaStore));
+streamDeck.actions.registerAction(new AgentQueue(store, pager));
+streamDeck.actions.registerAction(new AgentView(store, pager, () => favorites.ids));
+streamDeck.actions.registerAction(new WorkspacePage(store, pager));
+streamDeck.actions.registerAction(new Favorite(store, favorites, persistFavorites));
+streamDeck.actions.registerAction(new Health(store, quotaStore));
+streamDeck.actions.registerAction(new Recovery(store));
+streamDeck.actions.registerAction(new Session(store, (name) => persistSettings({ sessionName: name })));
+streamDeck.actions.registerAction(new Terminal());
 
 await streamDeck.connect();
 
 // globalSettings は接続後でないと取れないため、既定パスで作ってから差し替える。
-const globalSettings = await streamDeck.settings.getGlobalSettings<GlobalSettings>();
-store.setSocketPath(globalSettings.socketPath ?? DEFAULT_SOCKET_PATH);
+pluginSettings = await streamDeck.settings.getGlobalSettings<GlobalSettings>();
+favorites.replace(pluginSettings.favoriteSessions ?? []);
+favorites.subscribe(() => pager.refresh());
+store.setSocketPath(socketPathFor(pluginSettings));
 store.start();
 let previousFocusedPaneId: string | null | undefined;
 store.subscribe((state) => {
@@ -62,16 +100,18 @@ store.subscribe((state) => {
     snapshot.focusedPaneId !== null &&
     snapshot.focusedPaneId !== previousFocusedPaneId
   ) {
-    const index = sortAgents(snapshot).findIndex(
+    const index = pager.visibleAgents(snapshot, favorites.ids).findIndex(
       (agent) => agent.paneId === snapshot.focusedPaneId,
     );
-    pager.showAbsoluteIndex(index + 1, snapshot.agents.length);
+    if (index >= 0) pager.showAbsoluteIndex(index + 1, pager.visibleAgents(snapshot, favorites.ids).length);
   }
   previousFocusedPaneId = snapshot.focusedPaneId;
 });
 
 streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) => {
-  store.setSocketPath(ev.settings.socketPath ?? DEFAULT_SOCKET_PATH);
+  pluginSettings = ev.settings;
+  favorites.replace(ev.settings.favoriteSessions ?? []);
+  store.setSocketPath(socketPathFor(ev.settings));
 });
 
 // Property Inspector のエージェント一覧は、プラグインが持っている状態から返す。

@@ -8,7 +8,17 @@
     <script src="lib/toggle.js"></script>
   </head>
   <body>
-    <sdpi-item label="__MSG_prompt__">
+    <sdpi-item label="__MSG_macro__">
+      <sdpi-select id="macro" setting="macro" default="custom">
+        <option value="continue">Continue</option>
+        <option value="review">Review diff</option>
+        <option value="tests">Run tests</option>
+        <option value="explain">Explain blocker</option>
+        <option value="stop">Stop safely</option>
+        <option value="custom">Custom</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item id="row-text" label="__MSG_prompt__">
       <sdpi-textarea
         setting="text"
         rows="4"
@@ -62,6 +72,7 @@
     </sdpi-item>
 
     <script>
+      bindToggle("macro", { "row-text": ["custom"] });
       bindToggle("binding", { "row-index": ["index"], "row-session": ["session"] });
     </script>
   </body>

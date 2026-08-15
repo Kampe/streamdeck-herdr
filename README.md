@@ -24,6 +24,9 @@ or OpenUsage. Provider quota is a separate, optional integration.
   socket protocol.
 - Live Claude, Codex, Antigravity, and Grok quota from OpenUsage, with provider
   icons, remaining percentage, reset time, and pool selection.
+- Hardware-native attention and idle queues, workspace filtering, favorites,
+  Herdr health, guarded recovery, named-session switching, prompt macros, and
+  configurable terminal foregrounding.
 - Ready-to-import profiles for the original 15-key Stream Deck and Stream Deck
   Neo.
 
@@ -96,6 +99,14 @@ fall back to a two-letter mark. Logo paths come from
 | Swap Pane | Tap to swap right; hold to swap down |
 | Close Pane | Hold for 600 ms to close the focused pane; a tap does nothing |
 | Quota | Show live provider quota; press to force a refresh |
+| Agent Queue | Focus the next attention-needed or idle agent; show the count |
+| Agent View | Cycle Fleet, Attention, Idle, Favorites, and Workspace views |
+| Workspace Page | Tap to advance workspace; hold for the previous workspace |
+| Favorite | Pin or unpin the currently focused agent |
+| Herdr Health | Show connection, fleet, blocked-agent, and quota health |
+| Recovery | Retry, or interrupt and retry, the focused agent |
+| Terminal | Bring iTerm2, Terminal, or WezTerm forward using a match |
+| Herdr Session | Switch to a named Herdr session socket |
 
 Split, Swap, Close, and manual Approve remain available in the action library
 but are intentionally absent from the 15-key default profile. The default is
@@ -113,6 +124,10 @@ Actions that operate on an agent can target:
 - **Focused agent** — whichever agent Herdr currently focuses.
 - **Fleet index** — the Nth agent in stable fleet order.
 - **Pinned session** — one persistent agent session UUID.
+
+Prompt actions can use built-in macros for Continue, Review diff, Run tests,
+Explain blocker, and Stop safely, or keep a custom prompt. Recovery is
+hold-to-run and its restart mode sends Escape before the retry prompt.
 
 Paged agent keys use fleet indexes. Other controls default to the focused
 agent. Configure targeting and labels in the Stream Deck Property Inspector.
@@ -201,6 +216,23 @@ Profile:
 
 This profile includes one optional Codex quota key. Replace it with any Herdr
 action if OpenUsage is not installed.
+
+### Control profile
+
+The optional control profile is designed for the original 15-key device. It
+replaces quota keys with fleet controls:
+
+```text
+Agents 1–8 · Agent View · Workspace
+Attention · Idle · Favorite · Health · Terminal
+```
+
+Profile:
+`com.github.yuntan.herdr.sdPlugin/profiles/herdr-control.streamDeckProfile`
+
+The quota-enabled original profile remains available for the local OpenUsage
+setup. Import the control profile when fleet attention and workspace navigation
+matter more than quota display.
 
 | Row | Keys |
 | --- | --- |

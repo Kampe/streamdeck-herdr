@@ -35,13 +35,17 @@ type SlotEntry = {
 export class AgentSlot extends SingletonAction<AgentSlotSettings> {
   readonly #store: HerdrStore;
   readonly #pager: AgentPager;
+  readonly #favorites: () => ReadonlySet<string>;
+  readonly #foreground: () => Promise<boolean>;
   /** 表示中のキー。`onWillDisappear` で必ず取り除く。 */
   readonly #entries = new Map<string, SlotEntry>();
 
-  constructor(store: HerdrStore, pager: AgentPager) {
+  constructor(store: HerdrStore, pager: AgentPager, favorites: () => ReadonlySet<string> = () => new Set(), foreground: () => Promise<boolean> = bringITermToFront) {
     super();
     this.#store = store;
     this.#pager = pager;
+    this.#favorites = favorites;
+    this.#foreground = foreground;
   }
 
   override onWillAppear(ev: WillAppearEvent<AgentSlotSettings>): void {
@@ -81,19 +85,18 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
   }
 
   override async onKeyDown(ev: KeyDownEvent<AgentSlotSettings>): Promise<void> {
-    const target = resolveAgent(
-      this.#effectiveSettings(ev.payload.settings),
-      this.#store.snapshot,
-      "index",
-    )?.paneId;
-    if (target === undefined) {
+    const snapshot = this.#store.snapshot;
+    const target = snapshot === null
+      ? null
+      : this.#resolveAgent(ev.payload.settings, snapshot)?.paneId ?? null;
+    if (target === null) {
       await ev.action.showAlert();
       return;
     }
 
     try {
       await this.#store.request("agent.focus", { target });
-      await bringITermToFront();
+      await this.#foreground();
     } catch (error) {
       streamDeck.logger.error("エージェントのフォーカスに失敗しました", error);
       await ev.action.showAlert();
@@ -113,7 +116,7 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
       return;
     }
 
-    const agent = resolveAgent(effectiveSettings, state.snapshot, "index");
+    const agent = this.#resolveAgent(settings, state.snapshot);
     if (agent === null) {
       await key.setImage(renderAgentKey({ kind: "empty", slot }));
       await key.setTitle(resolveSlotTitle(settings, null, state.snapshot));
@@ -137,5 +140,12 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
       return settings;
     }
     return { ...settings, index: this.#pager.absoluteIndex(settings.index ?? 1) };
+  }
+
+  #resolveAgent(settings: AgentSlotSettings, snapshot: NonNullable<HerdrStore["snapshot"]>) {
+    if (settings.paged === true && (settings.binding ?? "index") === "index") {
+      return this.#pager.visibleAgent(snapshot, settings.index ?? 1, this.#favorites());
+    }
+    return resolveAgent(settings, snapshot, "index");
   }
 }

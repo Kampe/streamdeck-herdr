@@ -2,7 +2,13 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const ITERM_ACTIVATE_SCRIPT = `tell application "iTerm2"
+
+export type TerminalApp = "iTerm2" | "Terminal" | "WezTerm";
+export type OsascriptRunner = (args: readonly string[]) => Promise<void>;
+
+function iTermScript(match: string): string {
+  const escaped = match.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  return `tell application "iTerm2"
   set targetWindow to missing value
   set targetTab to missing value
   set targetSession to missing value
@@ -10,7 +16,7 @@ const ITERM_ACTIVATE_SCRIPT = `tell application "iTerm2"
     repeat with candidateTab in tabs of candidateWindow
       repeat with candidateSession in sessions of candidateTab
         set sessionName to name of candidateSession
-        if sessionName contains "herdr" or sessionName contains "tmux" then
+        if sessionName contains "${escaped}" or sessionName contains "tmux" then
           set targetWindow to candidateWindow
           set targetTab to candidateTab
           set targetSession to candidateSession
@@ -28,27 +34,39 @@ const ITERM_ACTIVATE_SCRIPT = `tell application "iTerm2"
   end if
   activate
 end tell`;
+}
 
-export type OsascriptRunner = (args: readonly string[]) => Promise<void>;
+function simpleTerminalScript(app: "Terminal" | "WezTerm", match: string): string {
+  const escaped = match.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  return `tell application "${app}"
+  activate
+  repeat with candidateWindow in windows
+    if (name of candidateWindow contains "${escaped}") then
+      set index of candidateWindow to 1
+      exit repeat
+    end if
+  end repeat
+end tell`;
+}
 
 async function runOsascript(args: readonly string[]): Promise<void> {
-  await execFileAsync("/usr/bin/osascript", [...args], {
-    timeout: 1_500,
-    maxBuffer: 32 * 1024,
-  });
+  await execFileAsync("/usr/bin/osascript", [...args], { timeout: 1_500, maxBuffer: 32 * 1024 });
 }
 
-/** Bring the iTerm2 app forward without injecting keys or changing pane state. */
-export async function bringITermToFront(run: OsascriptRunner = runOsascript): Promise<boolean> {
-  if (process.platform !== "darwin") {
-    return false;
-  }
-
+/** Bring a supported terminal forward without injecting keys. */
+export async function bringTerminalToFront(
+  app: TerminalApp = "iTerm2",
+  match = "herdr",
+  run: OsascriptRunner = runOsascript,
+): Promise<boolean> {
+  if (process.platform !== "darwin") return false;
   try {
-    await run(["-e", ITERM_ACTIVATE_SCRIPT]);
+    await run(["-e", app === "iTerm2" ? iTermScript(match) : simpleTerminalScript(app, match)]);
     return true;
   } catch {
-    // App missing or Automation permission denied. Herdr focus must still work.
     return false;
   }
 }
+
+export const bringITermToFront = (run?: OsascriptRunner): Promise<boolean> =>
+  bringTerminalToFront("iTerm2", "herdr", run);

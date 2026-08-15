@@ -22,6 +22,7 @@ abstract class PageNavigation extends SingletonAction<PageSettings> {
   constructor(
     private readonly store: HerdrStore,
     private readonly pager: AgentPager,
+    private readonly favorites: () => ReadonlySet<string>,
     private readonly tapDirection: Direction,
     private readonly holdDirection: Direction | null,
   ) {
@@ -81,7 +82,7 @@ abstract class PageNavigation extends SingletonAction<PageSettings> {
     direction: Direction,
     ev: KeyDownEvent<PageSettings> | KeyUpEvent<PageSettings>,
   ): Promise<void> {
-    const count = this.store.snapshot?.agents.length ?? 0;
+    const count = this.store.snapshot === null ? 0 : this.pager.visibleAgents(this.store.snapshot, this.favorites()).length;
     if (direction === "previous") {
       this.pager.previous(count);
     } else {
@@ -92,21 +93,21 @@ abstract class PageNavigation extends SingletonAction<PageSettings> {
   }
 
   async #render(key: KeyAction<PageSettings>): Promise<void> {
-    const count = this.store.snapshot?.agents.length ?? 0;
+    const count = this.store.snapshot === null ? 0 : this.pager.visibleAgents(this.store.snapshot, this.favorites()).length;
     await key.setTitle(`${this.pager.page + 1}/${this.pager.pageCount(count)}`);
   }
 }
 
 @action({ UUID: ACTION_UUID_PAGE_PREVIOUS })
 export class PreviousAgentPage extends PageNavigation {
-  constructor(store: HerdrStore, pager: AgentPager) {
-    super(store, pager, "previous", null);
+  constructor(store: HerdrStore, pager: AgentPager, favorites: () => ReadonlySet<string>) {
+    super(store, pager, favorites, "previous", null);
   }
 }
 
 @action({ UUID: ACTION_UUID_PAGE_NEXT })
 export class NextAgentPage extends PageNavigation {
-  constructor(store: HerdrStore, pager: AgentPager) {
-    super(store, pager, "next", "previous");
+  constructor(store: HerdrStore, pager: AgentPager, favorites: () => ReadonlySet<string>) {
+    super(store, pager, favorites, "next", "previous");
   }
 }

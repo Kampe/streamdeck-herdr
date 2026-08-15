@@ -1,0 +1,8 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Recovery</title><script src="lib/sdpi-components.js"></script><script src="lib/toggle.js"></script></head>
+<body>
+<sdpi-item label="Operation"><sdpi-select setting="operation" default="retry"><option value="retry">Retry</option><option value="restart">Interrupt and retry</option></sdpi-select></sdpi-item>
+<sdpi-item label="Target"><sdpi-select setting="binding" default="focused"><option value="focused">Focused agent</option><option value="session">Pinned agent</option></sdpi-select></sdpi-item>
+<sdpi-item id="row-session" label="Agent" hidden><sdpi-select setting="sessionId" datasource="getAgents" show-refresh hot-reload></sdpi-select></sdpi-item>
+<script>bindToggle("binding", {"row-session":["session"]});</script>
+</body></html>

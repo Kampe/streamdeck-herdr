@@ -21,6 +21,14 @@ export const ACTION_UUID_PANE_SPLIT = `${PLUGIN_UUID}.pane-split`;
 export const ACTION_UUID_PANE_SWAP = `${PLUGIN_UUID}.pane-swap`;
 export const ACTION_UUID_PANE_CLOSE = `${PLUGIN_UUID}.pane-close`;
 export const ACTION_UUID_QUOTA = `${PLUGIN_UUID}.quota`;
+export const ACTION_UUID_AGENT_QUEUE = `${PLUGIN_UUID}.agent-queue`;
+export const ACTION_UUID_AGENT_VIEW = `${PLUGIN_UUID}.agent-view`;
+export const ACTION_UUID_WORKSPACE_PAGE = `${PLUGIN_UUID}.workspace-page`;
+export const ACTION_UUID_FAVORITE = `${PLUGIN_UUID}.favorite`;
+export const ACTION_UUID_HEALTH = `${PLUGIN_UUID}.health`;
+export const ACTION_UUID_RECOVERY = `${PLUGIN_UUID}.recovery`;
+export const ACTION_UUID_TERMINAL = `${PLUGIN_UUID}.terminal`;
+export const ACTION_UUID_SESSION = `${PLUGIN_UUID}.session`;
 
 /**
  * 既定のソケットパス。Stream Deck のプラグインプロセスは herdr の環境変数を

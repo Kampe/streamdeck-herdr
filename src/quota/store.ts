@@ -72,9 +72,14 @@ export class QuotaStore {
   #timer: ReturnType<typeof setInterval> | null = null;
   #inFlight: Promise<void> | null = null;
   #binary: Promise<string> | null = null;
+  #started = false;
 
   get state(): QuotaState {
     return this.#state;
+  }
+
+  get started(): boolean {
+    return this.#started;
   }
 
   subscribe(listener: QuotaListener): () => void {
@@ -87,6 +92,7 @@ export class QuotaStore {
     if (this.#timer !== null) {
       return;
     }
+    this.#started = true;
     void this.refresh();
     this.#timer = setInterval(() => void this.refresh(), REFRESH_INTERVAL_MS);
   }

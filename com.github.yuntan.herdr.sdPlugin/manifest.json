@@ -2,7 +2,7 @@
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "Name": "herdr",
   "Author": "yuntan",
-  "Description": "Monitor and control Herdr agents from Stream Deck: focus, approve, reject, interrupt, and send prompts.",
+  "Description": "Monitor and control Herdr fleets from Stream Deck: focus, queues, workspaces, favorites, health, recovery, prompts, and optional quota.",
   "Icon": "imgs/plugin-icon",
   "UUID": "com.github.yuntan.herdr",
   "Version": "0.1.0.0",
@@ -31,6 +31,12 @@
     },
     {
       "Name": "profiles/herdr-original",
+      "DeviceType": 0,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/herdr-control",
       "DeviceType": 0,
       "Readonly": false,
       "DontAutoSwitchWhenInstalled": true
@@ -134,6 +140,74 @@
       "Controllers": ["Keypad"],
       "DisableAutomaticStates": true,
       "States": [{ "Image": "imgs/keys/quota", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Agent Queue",
+      "UUID": "com.github.yuntan.herdr.agent-queue",
+      "Icon": "imgs/keys/agent-slot",
+      "Tooltip": "Focus the next Herdr agent needing attention or idle capacity.",
+      "PropertyInspectorPath": "ui/agent-queue.html",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/agent-slot", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Agent View",
+      "UUID": "com.github.yuntan.herdr.agent-view",
+      "Icon": "imgs/keys/page-next",
+      "Tooltip": "Cycle fleet, attention, idle, favorites, and workspace views.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/page-next", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Workspace Page",
+      "UUID": "com.github.yuntan.herdr.workspace-page",
+      "Icon": "imgs/keys/page-next",
+      "Tooltip": "Cycle workspaces; hold for the previous workspace.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/page-next", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Favorite",
+      "UUID": "com.github.yuntan.herdr.favorite",
+      "Icon": "imgs/keys/agent-slot",
+      "Tooltip": "Pin or unpin the focused agent.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/agent-slot", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Herdr Health",
+      "UUID": "com.github.yuntan.herdr.health",
+      "Icon": "imgs/keys/quota",
+      "Tooltip": "Show Herdr connection and fleet health.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/quota", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Recovery",
+      "UUID": "com.github.yuntan.herdr.recovery",
+      "Icon": "imgs/keys/interrupt",
+      "Tooltip": "Retry or restart the focused agent with a guarded prompt.",
+      "PropertyInspectorPath": "ui/recovery.html",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/interrupt", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Terminal",
+      "UUID": "com.github.yuntan.herdr.terminal",
+      "Icon": "imgs/keys/prompt",
+      "Tooltip": "Bring the configured terminal app and Herdr session forward.",
+      "PropertyInspectorPath": "ui/terminal.html",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/prompt", "TitleAlignment": "top", "FontSize": 12 }]
+    },
+    {
+      "Name": "Herdr Session",
+      "UUID": "com.github.yuntan.herdr.session",
+      "Icon": "imgs/keys/prompt",
+      "Tooltip": "Switch to a named Herdr session socket.",
+      "PropertyInspectorPath": "ui/session.html",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "imgs/keys/prompt", "TitleAlignment": "top", "FontSize": 12 }]
     }
   ]
 }

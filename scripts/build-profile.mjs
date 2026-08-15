@@ -69,6 +69,28 @@ const PROFILES = [
       ],
     ],
   },
+  {
+    id: "6B9DD8B4-0D65-4EC7-9B0E-2E5BB8B584C0",
+    model: "20GAA9902",
+    output: "com.github.yuntan.herdr.sdPlugin/profiles/herdr-control.streamDeckProfile",
+    keys: [
+      ["0,0", ...pagedAgent(1)],
+      ["1,0", ...pagedAgent(2)],
+      ["2,0", ...pagedAgent(3)],
+      ["3,0", ...pagedAgent(4)],
+      ["4,0", ...pagedAgent(5)],
+      ["0,1", ...pagedAgent(6)],
+      ["1,1", ...pagedAgent(7)],
+      ["2,1", ...pagedAgent(8)],
+      ["3,1", "agent-view", "Agent View", {}],
+      ["4,1", "workspace-page", "Workspace", {}],
+      ["0,2", "agent-queue", "Attention", { queue: "attention" }],
+      ["1,2", "agent-queue", "Idle", { queue: "idle" }],
+      ["2,2", "favorite", "Favorite", {}],
+      ["3,2", "health", "Health", {}],
+      ["4,2", "terminal", "Terminal", { app: "iTerm2", match: "herdr" }],
+    ],
+  },
 ];
 
 /** タイトルはキー画像の上端に重ねる。manifest の States と揃えておく。 */

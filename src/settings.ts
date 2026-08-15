@@ -19,6 +19,13 @@ export type LabelSource = "workspace" | "title" | "custom";
 export type GlobalSettings = {
   /** 既定以外の herdr ソケットを使う場合のパス。 */
   socketPath?: string;
+  /** Session UUIDs pinned to the favorites view. */
+  favoriteSessions?: string[];
+  /** Optional terminal app used by foreground handoff. */
+  terminalApp?: "iTerm2" | "Terminal" | "WezTerm";
+  /** Optional substring used to select the terminal window/session. */
+  terminalMatch?: string;
+  sessionName?: string;
 };
 
 /** 対象エージェントを指定するアクションが共通で持つ設定。 */
@@ -37,6 +44,16 @@ export type AgentSlotSettings = TargetSettings & {
   customLabel?: string;
 };
 
+export type AgentQueueSettings = { queue?: "attention" | "idle" };
+export type AgentViewSettings = {
+  view?: "fleet" | "attention" | "idle" | "favorites" | "workspace";
+};
+export type RecoverySettings = TargetSettings & { operation?: "retry" | "restart" };
+export type HealthSettings = Record<string, never>;
+export type FavoriteSettings = Record<string, never>;
+export type SessionSettings = { sessionName?: string };
+export type TerminalSettings = { app?: "iTerm2" | "Terminal" | "WezTerm"; match?: string };
+
 export type SendKeysSettings = TargetSettings & {
   preset?: KeyPreset;
   /** `preset` が `custom` のときに送るキー列（空白区切り）。 */
@@ -47,6 +64,7 @@ export type SendKeysSettings = TargetSettings & {
 export type PromptSettings = TargetSettings & {
   text?: string;
   label?: string;
+  macro?: "continue" | "review" | "tests" | "explain" | "stop" | "custom";
 };
 
 export type QuotaSettings = {
