@@ -76,6 +76,6 @@ describe("AgentPager", () => {
     pager.setView({ mode: "favorites" });
     expect(pager.visibleAgents(snapshot, new Set(["c"])).map((agent) => agent.sessionId)).toEqual(["c"]);
     pager.setView({ mode: "workspace", workspaceId: "w1" });
-    expect(pager.visibleAgents(snapshot).map((agent) => agent.sessionId)).toEqual(["a", "b"]);
+    expect(pager.visibleAgents(snapshot).map((agent) => agent.sessionId)).toEqual(["b", "a"]);
   });
 });

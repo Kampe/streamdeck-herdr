@@ -15,7 +15,8 @@ or OpenUsage. Provider quota is a separate, optional integration.
 
 - English and Japanese localization.
 - Dynamic, shared agent pages instead of a fixed four-agent layout.
-- Stable ordering by Herdr workspace number and pane ID.
+- Attention-first ordering: blocked, done, and unknown panes appear before working
+  and idle panes; workspace number and pane ID provide stable tie-breakers.
 - A white outline around the focused agent and automatic page following when
   Herdr focus changes.
 - Larger, top-aligned workspace labels that remain readable on a desk-mounted
@@ -51,7 +52,8 @@ Each agent key shows:
 - Its absolute fleet slot at the lower right.
 - A white outline when that pane is focused in Herdr.
 
-Agents are sorted by Herdr workspace number, then pane ID. A page is a window
+Agents are sorted attention-first (blocked, done, unknown, working, idle), then
+by Herdr workspace number and pane ID. A page is a window
 over that one ordered fleet; it is not a Herdr workspace or tab. Pressing the
 page key only browses the fleet. Press an agent key to focus that exact pane.
 

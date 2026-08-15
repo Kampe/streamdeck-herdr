@@ -42,6 +42,26 @@ describe("sortAgents", () => {
     ]);
   });
 
+  it("puts attention states ahead of working and idle agents", () => {
+    const prioritized = snapshot({
+      agents: [
+        agent({ paneId: "wA:p1", workspaceId: "wA", status: "idle" }),
+        agent({ paneId: "wA:p2", workspaceId: "wA", status: "working" }),
+        agent({ paneId: "wB:p1", workspaceId: "wB", status: "done" }),
+        agent({ paneId: "wB:p2", workspaceId: "wB", status: "blocked" }),
+        agent({ paneId: "wA:p3", workspaceId: "wA", status: "unknown" }),
+      ],
+    });
+
+    expect(sortAgents(prioritized).map((item) => item.status)).toEqual([
+      "blocked",
+      "done",
+      "unknown",
+      "working",
+      "idle",
+    ]);
+  });
+
   it("ワークスペース情報が無いエージェントは末尾に送る", () => {
     const withOrphan = snapshot({
       agents: [

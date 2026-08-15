@@ -155,7 +155,7 @@ streamdeck-herdr/
 
 `agent-slot` は `index` と `session` のみを持つ（`focused` では意味を成さない）。
 
-`index` の並び順は **ワークスペース番号の昇順、同一ワークスペース内は pane_id の昇順**で安定させる。ペインの開閉で並びが変わるのは仕様（Codex Micro のスロットと同じ挙動）とし、固定したい場合は `session` を使う。
+`index` の並び順は **attention-first（blocked、done、unknown、working、idle）**、同じ状態ではワークスペース番号の昇順、同一ワークスペース内は pane_id の昇順で安定させる。ペインの開閉で並びが変わるのは仕様（Codex Micro のスロットと同じ挙動）とし、固定したい場合は `session` を使う。
 
 解決は `resolveTarget(settings, snapshot): string | null` という純関数で行い、単体テストする。
 
