@@ -34,15 +34,15 @@ function snapshot(overrides: Partial<SessionSnapshot> = {}): SessionSnapshot {
 }
 
 describe("sortAgents", () => {
-  it("ワークスペース番号の昇順、同一ワークスペース内は pane_id の昇順に並べる", () => {
+  it("preserves Herdr snapshot order exactly", () => {
     expect(sortAgents(snapshot()).map((item) => item.paneId)).toEqual([
-      "wA:p1",
-      "wA:p3",
       "wB:p1",
+      "wA:p3",
+      "wA:p1",
     ]);
   });
 
-  it("puts attention states ahead of working and idle agents", () => {
+  it("does not impose a second status ordering", () => {
     const prioritized = snapshot({
       agents: [
         agent({ paneId: "wA:p1", workspaceId: "wA", status: "idle" }),
@@ -54,15 +54,15 @@ describe("sortAgents", () => {
     });
 
     expect(sortAgents(prioritized).map((item) => item.status)).toEqual([
-      "blocked",
-      "done",
-      "unknown",
-      "working",
       "idle",
+      "working",
+      "done",
+      "blocked",
+      "unknown",
     ]);
   });
 
-  it("ワークスペース情報が無いエージェントは末尾に送る", () => {
+  it("keeps Herdr order even when workspace metadata is absent", () => {
     const withOrphan = snapshot({
       agents: [
         agent({ paneId: "wZ:p1", workspaceId: "wZ" }),
@@ -70,7 +70,7 @@ describe("sortAgents", () => {
       ],
     });
 
-    expect(sortAgents(withOrphan).map((item) => item.paneId)).toEqual(["wA:p1", "wZ:p1"]);
+    expect(sortAgents(withOrphan).map((item) => item.paneId)).toEqual(["wZ:p1", "wA:p1"]);
   });
 
   it("入力のエージェント配列を書き換えない", () => {
@@ -101,7 +101,7 @@ describe("resolveAgent の index", () => {
   });
 
   it("index 未設定なら 1 番目を返す", () => {
-    expect(resolveAgent({ binding: "index" }, snapshot(), "index")?.paneId).toBe("wA:p1");
+    expect(resolveAgent({ binding: "index" }, snapshot(), "index")?.paneId).toBe("wB:p1");
   });
 
   it("範囲外なら null", () => {
@@ -130,7 +130,7 @@ describe("resolveAgent の session", () => {
 describe("resolveTarget", () => {
   it("binding 未設定なら渡された既定を使う", () => {
     expect(resolveTarget({}, snapshot(), "focused")).toBe("wA:p1");
-    expect(resolveTarget({ index: 3 }, snapshot(), "index")).toBe("wB:p1");
+    expect(resolveTarget({ index: 3 }, snapshot(), "index")).toBe("wA:p1");
   });
 
   it("オフライン（スナップショットが null）なら常に null", () => {

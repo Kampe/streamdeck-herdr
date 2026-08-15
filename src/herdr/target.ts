@@ -9,38 +9,13 @@
 import type { TargetBinding, TargetSettings } from "../settings.js";
 import type { AgentInfo, SessionSnapshot } from "./types.js";
 
-/** Herdr's attention-first ordering, with stable structural tie-breakers. */
-const STATUS_PRIORITY: Record<AgentInfo["status"], number> = {
-  blocked: 0,
-  done: 1,
-  unknown: 2,
-  working: 3,
-  idle: 4,
-};
-
 /**
- * エージェントを表示順に並べる。対応が必要な状態を先にし、同じ状態では
- * ワークスペース番号、pane_id の順で安定させる。ワークスペースが見つからない
- * ものは同じ優先度の中で末尾に送る。
+ * Herdr が返したスナップショットの表示順をそのまま使う。
+ * Herdr 自身が状態やワークスペースを並べ替えるため、ここで別の優先度を
+ * 再適用すると Stream Deck と Herdr の順番がずれてしまう。
  */
 export function sortAgents(snapshot: SessionSnapshot): AgentInfo[] {
-  const orderOf = new Map(
-    snapshot.workspaces.map((workspace) => [workspace.workspaceId, workspace.number]),
-  );
-
-  return [...snapshot.agents].sort((left, right) => {
-    const leftPriority = STATUS_PRIORITY[left.status];
-    const rightPriority = STATUS_PRIORITY[right.status];
-    if (leftPriority !== rightPriority) {
-      return leftPriority - rightPriority;
-    }
-    const leftOrder = orderOf.get(left.workspaceId) ?? Number.MAX_SAFE_INTEGER;
-    const rightOrder = orderOf.get(right.workspaceId) ?? Number.MAX_SAFE_INTEGER;
-    if (leftOrder !== rightOrder) {
-      return leftOrder - rightOrder;
-    }
-    return left.paneId.localeCompare(right.paneId);
-  });
+  return [...snapshot.agents];
 }
 
 /**

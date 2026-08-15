@@ -32,8 +32,8 @@ const snapshot: SessionSnapshot = {
 describe("agentDataSourceItems", () => {
   it("表示順にワークスペース名とエージェント種別を並べる", () => {
     expect(agentDataSourceItems(snapshot)).toEqual([
-      { label: "alpha · claude", value: "uuid-a" },
       { label: "bravo · codex", value: "uuid-b" },
+      { label: "alpha · claude", value: "uuid-a" },
     ]);
   });
 
