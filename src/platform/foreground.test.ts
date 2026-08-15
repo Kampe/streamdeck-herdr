@@ -5,7 +5,8 @@ import { bringITermToFront } from "./foreground.js";
 describe("bringITermToFront", () => {
   it("activates iTerm2 through osascript", async () => {
     const run = vi.fn(async (_args: readonly string[]) => undefined);
-    const result = await bringITermToFront(run);
+    const wake = vi.fn(async () => undefined);
+    const result = await bringITermToFront(run, wake);
 
     if (process.platform === "darwin") {
       expect(result).toBe(true);
@@ -13,6 +14,7 @@ describe("bringITermToFront", () => {
         "-e",
         expect.stringContaining('tell application "iTerm2"'),
       ]);
+      expect(wake).toHaveBeenCalledOnce();
       const script = run.mock.calls[0]?.[0]?.join("\n") ?? "";
       expect(script).toContain("sessionName contains \"herdr\"");
       expect(script).toContain("sessionName contains \"tmux\"");
@@ -26,7 +28,7 @@ describe("bringITermToFront", () => {
     const run = vi.fn(async (_args: readonly string[]) => {
       throw new Error("not authorized");
     });
-    const result = await bringITermToFront(run);
+    const result = await bringITermToFront(run, async () => undefined);
 
     expect(result).toBe(false);
   });

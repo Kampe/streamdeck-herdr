@@ -5,6 +5,7 @@ const execFileAsync = promisify(execFile);
 
 export type TerminalApp = "iTerm2" | "Terminal" | "WezTerm";
 export type OsascriptRunner = (args: readonly string[]) => Promise<void>;
+export type WakeRunner = () => Promise<void>;
 
 function iTermScript(match: string): string {
   const escaped = match.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
@@ -53,14 +54,21 @@ async function runOsascript(args: readonly string[]): Promise<void> {
   await execFileAsync("/usr/bin/osascript", [...args], { timeout: 1_500, maxBuffer: 32 * 1024 });
 }
 
+/** Reset macOS display-idle state without injecting a key into a live agent. */
+async function wakeDisplay(): Promise<void> {
+  await execFileAsync("/usr/bin/caffeinate", ["-u", "-t", "2"], { timeout: 2_500 });
+}
+
 /** Bring a supported terminal forward without injecting keys. */
 export async function bringTerminalToFront(
   app: TerminalApp = "iTerm2",
   match = "herdr",
   run: OsascriptRunner = runOsascript,
+  wake: WakeRunner = wakeDisplay,
 ): Promise<boolean> {
   if (process.platform !== "darwin") return false;
   try {
+    await wake();
     await run(["-e", app === "iTerm2" ? iTermScript(match) : simpleTerminalScript(app, match)]);
     return true;
   } catch {
@@ -68,5 +76,5 @@ export async function bringTerminalToFront(
   }
 }
 
-export const bringITermToFront = (run?: OsascriptRunner): Promise<boolean> =>
-  bringTerminalToFront("iTerm2", "herdr", run);
+export const bringITermToFront = (run?: OsascriptRunner, wake?: WakeRunner): Promise<boolean> =>
+  bringTerminalToFront("iTerm2", "herdr", run, wake);

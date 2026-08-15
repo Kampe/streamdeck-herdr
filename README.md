@@ -57,10 +57,11 @@ by Herdr workspace number and pane ID. A page is a window
 over that one ordered fleet; it is not a Herdr workspace or tab. Pressing the
 page key only browses the fleet. Press an agent key to focus that exact pane.
 
-On macOS, an Agent key also best-effort activates iTerm2 after Herdr accepts the
-focus request. This puts the terminal running tmux/Herdr above Stream Deck and
-other apps without sending keystrokes. Herdr focus still succeeds if iTerm2 is
-not installed or macOS Automation permission is unavailable.
+On macOS, an Agent key also best-effort wakes the display and activates iTerm2
+after Herdr accepts the focus request. This puts the terminal running tmux/Herdr
+above Stream Deck and other apps without sending keystrokes into the agent. It
+does not bypass a password-protected macOS lock screen; Herdr focus still
+succeeds if iTerm2 is not installed or Automation permission is unavailable.
 
 When focus changes in Herdr—whether from the Stream Deck, terminal, or another
 client—the deck automatically opens the page containing that agent. Manual page
