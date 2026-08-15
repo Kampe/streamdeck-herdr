@@ -100,4 +100,8 @@ describe("renderAgentKey", () => {
     expect(svg).toContain('stroke-opacity="0.42"');
     expect(svg).toContain('fill-opacity="0.12"');
   });
+
+  it("supports a restrained attention pulse", () => {
+    expect(render({ kind: "agent", status: "blocked", agent: "codex", pulse: true })).toContain('stroke-opacity="0.28"');
+  });
 });

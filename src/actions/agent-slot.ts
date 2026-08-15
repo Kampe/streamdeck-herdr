@@ -33,6 +33,8 @@ type SlotEntry = {
   lastStatus?: AgentStatus;
   flashUntil?: number;
   flashTimer?: ReturnType<typeof setTimeout>;
+  attentionTimer?: ReturnType<typeof setInterval>;
+  pulsePhase?: boolean;
 };
 
 @action({ UUID: ACTION_UUID_AGENT_SLOT })
@@ -77,6 +79,7 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
     entry.unsubscribeStore();
     entry.unsubscribePager();
     if (entry.flashTimer !== undefined) clearTimeout(entry.flashTimer);
+    if (entry.attentionTimer !== undefined) clearInterval(entry.attentionTimer);
     this.#entries.delete(ev.action.id);
   }
 
@@ -117,6 +120,8 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
 
     if (state.status === "offline") {
       entry.lastStatus = undefined;
+      if (entry.attentionTimer !== undefined) clearInterval(entry.attentionTimer);
+      entry.attentionTimer = undefined;
       await key.setImage(renderAgentKey({ kind: "offline" }));
       await key.setTitle("");
       return;
@@ -125,6 +130,8 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
     const agent = this.#resolveAgent(settings, state.snapshot);
     if (agent === null) {
       entry.lastStatus = undefined;
+      if (entry.attentionTimer !== undefined) clearInterval(entry.attentionTimer);
+      entry.attentionTimer = undefined;
       await key.setImage(renderAgentKey({ kind: "empty", slot }));
       await key.setTitle(resolveSlotTitle(settings, null, state.snapshot));
       return;
@@ -141,6 +148,18 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
       }, 920);
     }
     const flash = entry.flashUntil !== undefined && entry.flashUntil > Date.now();
+    const attention = agent.status === "blocked" || agent.status === "unknown";
+    if (attention && entry.attentionTimer === undefined) {
+      entry.pulsePhase = false;
+      entry.attentionTimer = setInterval(() => {
+        entry.pulsePhase = !entry.pulsePhase;
+        void this.#render(entry);
+      }, 700);
+    } else if (!attention && entry.attentionTimer !== undefined) {
+      clearInterval(entry.attentionTimer);
+      entry.attentionTimer = undefined;
+      entry.pulsePhase = false;
+    }
     entry.lastStatus = agent.status;
 
     await key.setImage(
@@ -151,6 +170,7 @@ export class AgentSlot extends SingletonAction<AgentSlotSettings> {
         slot,
         focused: agent.focused,
         flash,
+        pulse: attention && entry.pulsePhase === true,
       }),
     );
     await key.setTitle(resolveSlotTitle(settings, agent, state.snapshot));
