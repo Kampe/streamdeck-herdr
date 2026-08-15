@@ -155,7 +155,7 @@ streamdeck-herdr/
 
 `agent-slot` は `index` と `session` のみを持つ（`focused` では意味を成さない）。
 
-`index` の並び順は Herdr の full pane order（agent 以外の pane は除外）をそのまま保つ。Herdr 自身の表示順を再現し、ペインの開閉で並びが変わるのは仕様（Codex Micro のスロットと同じ挙動）とする。固定したい場合は `session` を使う。
+`index` の並び順は Herdr の priority panel order（blocked、done、unknown、working、idle）とし、同じ状態では full pane order（agent 以外の pane は除外）を使う。ペインの開閉で並びが変わるのは仕様（Codex Micro のスロットと同じ挙動）とし、固定したい場合は `session` を使う。
 
 解決は `resolveTarget(settings, snapshot): string | null` という純関数で行い、単体テストする。
 

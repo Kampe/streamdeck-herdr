@@ -9,17 +9,27 @@
 import type { TargetBinding, TargetSettings } from "../settings.js";
 import type { AgentInfo, SessionSnapshot } from "./types.js";
 
+const STATUS_PRIORITY: Record<AgentInfo["status"], number> = {
+  blocked: 0,
+  done: 1,
+  unknown: 2,
+  working: 3,
+  idle: 4,
+};
+
 /**
- * Herdr が返したスナップショットの表示順をそのまま使う。
- * Herdr 自身が状態やワークスペースを並べ替えるため、ここで別の優先度を
- * 再適用すると Stream Deck と Herdr の順番がずれてしまう。
+ * Herdr の `agent_panel_sort = "priority"` と同じ優先度で並べ、同じ状態では
+ * Herdr の full pane order を保つ。これで attention queue と通常の panel 表示が一致する。
  */
 export function sortAgents(snapshot: SessionSnapshot): AgentInfo[] {
   const order = new Map((snapshot.paneOrder ?? snapshot.agents.map((agent) => agent.paneId))
     .map((paneId, index) => [paneId, index]));
-  return [...snapshot.agents].sort((left, right) =>
-    (order.get(left.paneId) ?? Number.MAX_SAFE_INTEGER) -
-    (order.get(right.paneId) ?? Number.MAX_SAFE_INTEGER));
+  return [...snapshot.agents].sort((left, right) => {
+    const priority = STATUS_PRIORITY[left.status] - STATUS_PRIORITY[right.status];
+    if (priority !== 0) return priority;
+    return (order.get(left.paneId) ?? Number.MAX_SAFE_INTEGER) -
+      (order.get(right.paneId) ?? Number.MAX_SAFE_INTEGER);
+  });
 }
 
 /**

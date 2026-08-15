@@ -52,8 +52,8 @@ Each agent key shows:
 - Its absolute fleet slot at the lower right.
 - A white outline when that pane is focused in Herdr.
 
-Agents retain Herdr’s full visual pane order (with non-agent panes filtered
-out). A page is a window
+Agents follow Herdr’s priority panel order—blocked, done, unknown, working,
+then idle—with Herdr’s full visual pane order as the tie-breaker. A page is a window
 over that one ordered fleet; it is not a Herdr workspace or tab. Pressing the
 page key only browses the fleet. Press an agent key to focus that exact pane.
 

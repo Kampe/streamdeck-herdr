@@ -34,7 +34,7 @@ function snapshot(overrides: Partial<SessionSnapshot> = {}): SessionSnapshot {
 }
 
 describe("sortAgents", () => {
-  it("preserves Herdr snapshot order exactly", () => {
+  it("uses priority ordering with Herdr pane order as tie-breaker", () => {
     expect(sortAgents(snapshot()).map((item) => item.paneId)).toEqual([
       "wB:p1",
       "wA:p3",
@@ -42,7 +42,7 @@ describe("sortAgents", () => {
     ]);
   });
 
-  it("does not impose a second status ordering", () => {
+  it("surfaces attention states before working and idle agents", () => {
     const prioritized = snapshot({
       agents: [
         agent({ paneId: "wA:p1", workspaceId: "wA", status: "idle" }),
@@ -53,13 +53,7 @@ describe("sortAgents", () => {
       ],
     });
 
-    expect(sortAgents(prioritized).map((item) => item.status)).toEqual([
-      "idle",
-      "working",
-      "done",
-      "blocked",
-      "unknown",
-    ]);
+    expect(sortAgents(prioritized).map((item) => item.status)).toEqual(["blocked", "done", "unknown", "working", "idle"]);
   });
 
   it("uses the full Herdr pane order instead of agent numbering", () => {
