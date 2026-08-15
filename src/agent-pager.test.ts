@@ -26,6 +26,22 @@ describe("AgentPager", () => {
     expect(pager.page).toBe(1);
   });
 
+  it("shows the page containing a focused absolute agent", () => {
+    const pager = new AgentPager(8);
+    pager.showAbsoluteIndex(17, 22);
+    expect(pager.page).toBe(2);
+    pager.showAbsoluteIndex(8, 22);
+    expect(pager.page).toBe(0);
+  });
+
+  it("ignores invalid focused indexes", () => {
+    const pager = new AgentPager(8);
+    pager.next(22);
+    pager.showAbsoluteIndex(0, 22);
+    pager.showAbsoluteIndex(23, 22);
+    expect(pager.page).toBe(1);
+  });
+
   it("notifies subscribers only when the page changes", () => {
     const pager = new AgentPager(8);
     const listener = vi.fn();

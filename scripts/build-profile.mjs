@@ -46,7 +46,7 @@ const PROFILES = [
     ],
   },
   {
-    id: "D46C02A9-64BE-43C8-9917-324175B0E603",
+    id: "4FD9F1F8-2351-42EA-A8A7-486AE5FB2BA9",
     model: "20GAA9902",
     output: "com.github.yuntan.herdr.sdPlugin/profiles/herdr-original.streamDeckProfile",
     keys: [
@@ -59,11 +59,11 @@ const PROFILES = [
       ["1,1", ...pagedAgent(7)],
       ["2,1", ...pagedAgent(8)],
       ["3,1", "page-next", "Agent Page", {}],
-      ["4,1", "pane-close", "Close Pane", {}],
+      ["4,1", "send-keys", "Send Keys", { binding: "focused", preset: "interrupt" }],
       ["0,2", "quota", "Quota", { provider: "claude", pool: "all" }],
       ["1,2", "quota", "Quota", { provider: "codex", pool: "all" }],
       ["2,2", "quota", "Quota", { provider: "antigravity", pool: "all" }],
-      ["3,2", "send-keys", "Send Keys", { binding: "focused", preset: "interrupt" }],
+      ["3,2", "quota", "Quota", { provider: "grok", pool: "all" }],
       [
         "4,2",
         "prompt",

@@ -25,6 +25,14 @@ export class AgentPager {
     return this.#page * this.pageSize + slot;
   }
 
+  /** Show the page containing a one-based absolute agent index. */
+  showAbsoluteIndex(index: number, agentCount: number): void {
+    if (!Number.isInteger(index) || index < 1 || index > agentCount) {
+      return;
+    }
+    this.#setPage(Math.floor((index - 1) / this.pageSize));
+  }
+
   next(agentCount: number): void {
     this.#setPage((this.#page + 1) % this.pageCount(agentCount));
   }

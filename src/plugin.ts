@@ -20,6 +20,7 @@ import { Quota } from "./actions/quota.js";
 import { SendKeys } from "./actions/send-keys.js";
 import { DEFAULT_SOCKET_PATH } from "./constants.js";
 import { HerdrStore } from "./herdr/store.js";
+import { sortAgents } from "./herdr/target.js";
 import type { GlobalSettings } from "./settings.js";
 import { QuotaStore } from "./quota/store.js";
 
@@ -48,7 +49,27 @@ const globalSettings = await streamDeck.settings.getGlobalSettings<GlobalSetting
 store.setSocketPath(globalSettings.socketPath ?? DEFAULT_SOCKET_PATH);
 store.start();
 quotaStore.start();
-store.subscribe((state) => pager.clamp(state.status === "online" ? state.snapshot.agents.length : 0));
+let previousFocusedPaneId: string | null | undefined;
+store.subscribe((state) => {
+  if (state.status !== "online") {
+    pager.clamp(0);
+    previousFocusedPaneId = undefined;
+    return;
+  }
+
+  const { snapshot } = state;
+  pager.clamp(snapshot.agents.length);
+  if (
+    snapshot.focusedPaneId !== null &&
+    snapshot.focusedPaneId !== previousFocusedPaneId
+  ) {
+    const index = sortAgents(snapshot).findIndex(
+      (agent) => agent.paneId === snapshot.focusedPaneId,
+    );
+    pager.showAbsoluteIndex(index + 1, snapshot.agents.length);
+  }
+  previousFocusedPaneId = snapshot.focusedPaneId;
+});
 
 streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) => {
   store.setSocketPath(ev.settings.socketPath ?? DEFAULT_SOCKET_PATH);
