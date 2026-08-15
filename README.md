@@ -64,8 +64,10 @@ does not bypass a password-protected macOS lock screen; Herdr focus still
 succeeds if iTerm2 is not installed or Automation permission is unavailable.
 
 When focus changes in Herdr—whether from the Stream Deck, terminal, or another
-client—the deck automatically opens the page containing that agent. Manual page
-browsing remains manual until focus changes.
+client—the deck opens the page containing that existing agent. A newly spawned
+agent may become focused in Herdr, but does not yank the deck away from the page
+you are browsing. Manual page browsing remains manual until an existing agent is
+focused.
 
 The combined page key advances on a tap and goes backward after a 600 ms hold.
 The Neo profile uses separate Previous and Next keys.

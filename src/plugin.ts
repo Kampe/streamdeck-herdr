@@ -87,18 +87,26 @@ favorites.subscribe(() => pager.refresh());
 store.setSocketPath(socketPathFor(pluginSettings));
 store.start();
 let previousFocusedPaneId: string | null | undefined;
+let previousAgentPaneIds: Set<string> | undefined;
 store.subscribe((state) => {
   if (state.status !== "online") {
     pager.clamp(0);
     previousFocusedPaneId = undefined;
+    previousAgentPaneIds = undefined;
     return;
   }
 
   const { snapshot } = state;
   pager.clamp(snapshot.agents.length);
+  const currentAgentPaneIds = new Set(snapshot.agents.map((agent) => agent.paneId));
+  const focusedPaneIsNew =
+    previousAgentPaneIds !== undefined &&
+    snapshot.focusedPaneId !== null &&
+    !previousAgentPaneIds.has(snapshot.focusedPaneId);
   if (
     snapshot.focusedPaneId !== null &&
     snapshot.focusedPaneId !== previousFocusedPaneId
+    && !focusedPaneIsNew
   ) {
     const index = pager.visibleAgents(snapshot, favorites.ids).findIndex(
       (agent) => agent.paneId === snapshot.focusedPaneId,
@@ -106,6 +114,7 @@ store.subscribe((state) => {
     if (index >= 0) pager.showAbsoluteIndex(index + 1, pager.visibleAgents(snapshot, favorites.ids).length);
   }
   previousFocusedPaneId = snapshot.focusedPaneId;
+  previousAgentPaneIds = currentAgentPaneIds;
 });
 
 streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) => {
