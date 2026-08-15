@@ -113,7 +113,7 @@ function statusBadge(status: AgentStatus, foreground: string): string {
   const badgeFill = foreground;
   const badgeText = STATUS_COLORS[status];
   if (status === "working" || status === "idle") {
-    return `<circle cx="${badgeX}" cy="${badgeY}" r="10" fill="${badgeFill}" fill-opacity="0.92" stroke="${badgeText}" stroke-opacity="0.55" stroke-width="2"/><circle cx="${badgeX}" cy="${badgeY}" r="4" fill="${badgeText}"/>`;
+    return "";
   }
   const glyph = status === "blocked" ? "!" : status === "done" ? "✓" : "?";
   return `<circle cx="${badgeX}" cy="${badgeY}" r="11" fill="${badgeFill}" fill-opacity="0.96" stroke="${badgeText}" stroke-opacity="0.55" stroke-width="2"/><text x="${badgeX}" y="${badgeY + 1}" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" font-weight="800" fill="${badgeText}">${glyph}</text>`;

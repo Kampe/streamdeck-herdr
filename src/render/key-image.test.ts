@@ -84,11 +84,9 @@ describe("renderAgentKey", () => {
     expect(working).toContain(STATUS_FOREGROUND_COLORS.working);
   });
 
-  it("adds a non-color state badge for every live agent", () => {
-    for (const status of ["idle", "working", "blocked", "done", "unknown"] as const) {
-      const svg = render({ kind: "agent", status, agent: "codex" });
-      expect(svg).toContain('cx="120" cy="24"');
-    }
+  it("keeps routine tiles clean and badges attention states", () => {
+    expect(render({ kind: "agent", status: "idle", agent: "codex" })).not.toContain('cx="120" cy="24"');
+    expect(render({ kind: "agent", status: "working", agent: "codex" })).not.toContain('cx="120" cy="24"');
     expect(render({ kind: "agent", status: "blocked", agent: "codex" })).toContain(">!<");
     expect(render({ kind: "agent", status: "done", agent: "codex" })).toContain(">✓<");
   });
