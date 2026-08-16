@@ -67,7 +67,6 @@ export class AgentQueue extends SingletonAction<AgentQueueSettings> {
     try {
       await this.store.request("agent.focus", { target: target.paneId });
       await bringITermToFront();
-      await ev.action.showOk();
     } catch (error) {
       streamDeck.logger.error("Agent queue focus failed", error);
       await ev.action.showAlert();

@@ -49,7 +49,6 @@ export class WorkspacePage extends SingletonAction<Record<string, never>> {
     this.#timers.delete(ev.action.id);
     this.#move(1);
     await this.#render(ev.action);
-    await ev.action.showOk();
   }
 
   #move(direction: 1 | -1): void {

@@ -79,7 +79,6 @@ export class Quota extends SingletonAction<QuotaSettings> {
         target,
         text: providerStandingOrder(provider),
       });
-      await ev.action.showOk();
     } catch (error) {
       streamDeck.logger.error("Provider standing order failed", error);
       await ev.action.showAlert();

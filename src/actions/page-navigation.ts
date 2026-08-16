@@ -89,7 +89,6 @@ abstract class PageNavigation extends SingletonAction<PageSettings> {
       this.pager.next(count);
     }
     streamDeck.logger.info(`agent page ${this.pager.page + 1}/${this.pager.pageCount(count)}`);
-    await ev.action.showOk();
   }
 
   async #render(key: KeyAction<PageSettings>): Promise<void> {

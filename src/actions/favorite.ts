@@ -26,8 +26,6 @@ export class Favorite extends SingletonAction<Record<string, never>> {
     const active = this.favorites.toggle(agent.sessionId);
     await this.persist([...this.favorites.ids]);
     await ev.action.setTitle(active ? "Pinned" : "Favorite");
-    await ev.action.showOk();
     streamDeck.logger.info(`favorite ${active ? "added" : "removed"}`);
   }
 }
-

@@ -36,7 +36,6 @@ export class Health extends SingletonAction<Record<string, never>> {
   override async onKeyDown(ev: KeyDownEvent<Record<string, never>>): Promise<void> {
     try {
       await this.store.request("ping");
-      await ev.action.showOk();
     } catch (error) {
       streamDeck.logger.warn("Herdr health check failed", error);
       await ev.action.showAlert();

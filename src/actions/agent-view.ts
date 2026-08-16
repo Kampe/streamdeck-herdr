@@ -52,7 +52,6 @@ export class AgentView extends SingletonAction<AgentViewSettings> {
       this.pager.setView({ mode: next });
     }
     await this.#render(ev.action);
-    await ev.action.showOk();
   }
 
   async #render(key: KeyAction<AgentViewSettings>): Promise<void> {

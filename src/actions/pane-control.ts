@@ -82,7 +82,6 @@ abstract class PaneControlAction extends SingletonAction<PaneControlSettings> {
     const request = paneControlRequest(control, paneId);
     try {
       await this.store.request(request.method, request.params);
-      await ev.action.showOk();
     } catch (error) {
       streamDeck.logger.error(`Herdr pane control failed: ${control}`, error);
       await ev.action.showAlert();

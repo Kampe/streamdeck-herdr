@@ -12,11 +12,9 @@ export class Terminal extends SingletonAction<TerminalSettings> {
 
   override async onKeyDown(ev: KeyDownEvent<TerminalSettings>): Promise<void> {
     const ok = await bringTerminalToFront(ev.payload.settings.app ?? "iTerm2", ev.payload.settings.match ?? "herdr");
-    if (ok) await ev.action.showOk();
-    else {
+    if (!ok) {
       streamDeck.logger.warn("Terminal foreground handoff unavailable");
       await ev.action.showAlert();
     }
   }
 }
-

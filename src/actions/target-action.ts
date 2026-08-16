@@ -72,7 +72,6 @@ export abstract class TargetAction<T extends TargetSettings> extends SingletonAc
 
     try {
       await this.perform(target, settings);
-      await ev.action.showOk();
     } catch (error) {
       streamDeck.logger.error("herdr への操作に失敗しました", error);
       await ev.action.showAlert();

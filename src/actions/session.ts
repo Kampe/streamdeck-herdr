@@ -29,7 +29,5 @@ export class Session extends SingletonAction<SessionSettings> {
     this.store.setSocketPath(socketPath);
     await this.persist(name);
     streamDeck.logger.info(`Herdr session selected: ${name}`);
-    await ev.action.showOk();
   }
 }
-

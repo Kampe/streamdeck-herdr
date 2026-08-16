@@ -58,7 +58,6 @@ export class Recovery extends SingletonAction<RecoverySettings> {
       if (restart) await this.store.request("agent.send_keys", { target, keys: ["esc"] });
       await this.store.request("agent.prompt", { target, text: restart ? RESTART_PROMPT : RETRY_PROMPT });
       await bringITermToFront();
-      await ev.action.showOk();
     } catch (error) {
       streamDeck.logger.error("Herdr recovery failed", error);
       await ev.action.showAlert();
