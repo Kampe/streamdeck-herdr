@@ -30,6 +30,7 @@ import { Quota } from "./actions/quota.js";
 import { SendKeys } from "./actions/send-keys.js";
 import { DEFAULT_SOCKET_PATH } from "./constants.js";
 import { HerdrStore } from "./herdr/store.js";
+import type { SessionSnapshot } from "./herdr/types.js";
 import type { GlobalSettings } from "./settings.js";
 import { QuotaStore } from "./quota/store.js";
 import { FavoritesStore } from "./favorites.js";
@@ -88,11 +89,13 @@ store.setSocketPath(socketPathFor(pluginSettings));
 store.start();
 let previousFocusedPaneId: string | null | undefined;
 let previousAgentPaneIds: Set<string> | undefined;
+let previousSnapshot: SessionSnapshot | undefined;
 store.subscribe((state) => {
   if (state.status !== "online") {
     pager.clamp(0);
     previousFocusedPaneId = undefined;
     previousAgentPaneIds = undefined;
+    previousSnapshot = undefined;
     return;
   }
 
@@ -103,10 +106,17 @@ store.subscribe((state) => {
     previousAgentPaneIds !== undefined &&
     snapshot.focusedPaneId !== null &&
     !previousAgentPaneIds.has(snapshot.focusedPaneId);
+  const focusedPaneWasOnCurrentPage =
+    previousSnapshot !== undefined &&
+    snapshot.focusedPaneId !== null &&
+    pager.visibleAgents(previousSnapshot, favorites.ids)
+      .slice(pager.page * pager.pageSize, (pager.page + 1) * pager.pageSize)
+      .some((agent) => agent.paneId === snapshot.focusedPaneId);
   if (
     snapshot.focusedPaneId !== null &&
     snapshot.focusedPaneId !== previousFocusedPaneId
     && !focusedPaneIsNew
+    && !focusedPaneWasOnCurrentPage
   ) {
     const index = pager.visibleAgents(snapshot, favorites.ids).findIndex(
       (agent) => agent.paneId === snapshot.focusedPaneId,
@@ -115,6 +125,7 @@ store.subscribe((state) => {
   }
   previousFocusedPaneId = snapshot.focusedPaneId;
   previousAgentPaneIds = currentAgentPaneIds;
+  previousSnapshot = snapshot;
 });
 
 streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>((ev) => {
