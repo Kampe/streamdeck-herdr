@@ -20,6 +20,13 @@ describe("agentGlyph", () => {
     expect(agentGlyph("antigravity", "#fff")).toBe(agentGlyph("gemini", "#fff"));
   });
 
+  it("uses the Grok diagonal mark instead of a text fallback", () => {
+    const glyph = agentGlyph("grok", "#fff");
+    expect(glyph).toContain("<g transform=\"scale(0.705882)\">");
+    expect(glyph).toContain("M13.2371 21.0407");
+    expect(glyph).not.toContain(">GR<");
+  });
+
   it("穴あきのロゴは evenodd で塗る", () => {
     expect(agentGlyph("codex", "#fff")).toContain('fill-rule="evenodd"');
     expect(agentGlyph("claude", "#fff")).not.toContain("fill-rule");

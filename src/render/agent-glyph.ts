@@ -41,6 +41,11 @@ const LOGOS: Record<string, LogoPath> = {
   },
 };
 
+/** Grok's diagonal mark, normalized from its 34×33 artwork into our icon box. */
+export function grokGlyph(color: string): string {
+  return `<g transform="scale(0.705882)"><path d="M13.2371 21.0407L24.3186 12.8506C24.8619 12.4491 25.6384 12.6057 25.8973 13.2294C27.2597 16.5185 26.651 20.4712 23.9403 23.1851C21.2297 25.8989 17.4581 26.4941 14.0108 25.1386L10.2449 26.8843C15.6463 30.5806 22.2051 29.6665 26.304 25.5601C29.5551 22.3051 30.562 17.8683 29.6205 13.8673L29.629 13.8758C28.2637 7.99809 29.9647 5.64871 33.449 0.844576L29.1113 5.09055L13.2343 21.0436" fill="${color}"/><path d="M10.9503 23.0313C7.07343 19.3235 7.74185 13.5853 11.0498 10.2763C13.4959 7.82722 17.5036 6.82767 21.0021 8.2971L24.7595 6.55998C24.0826 6.07017 23.215 5.54334 22.2195 5.17313C17.7198 3.31926 12.3326 4.24192 8.67479 7.90126C5.15635 11.4239 4.04992 16.8403 5.94992 21.4622C7.36924 24.9165 5.04257 27.3598 2.69884 29.826C1.86829 30.7002 1.0349 31.5745 0.36364 32.5L10.9474 23.0341" fill="${color}"/></g>`;
+}
+
 /**
  * エージェント種別のグリフを返す。ロゴを用意していない種別は頭 2 文字を大文字で描く
  * （`cline` と `claude` のように頭 1 文字では被るため 2 文字にする）。
@@ -51,6 +56,9 @@ export function agentGlyph(agent: string | null, color: string): string {
   // Herdr reports Antigravity as `agy` in pane metadata, while settings and
   // quota use the longer `antigravity` name. Both are Gemini-backed agents.
   const logoKey = key === "agy" || key === "antigravity" ? "gemini" : key;
+  if (logoKey === "grok") {
+    return grokGlyph(color);
+  }
   const logo = LOGOS[logoKey];
   if (logo !== undefined) {
     return logoPath(logo, color);
