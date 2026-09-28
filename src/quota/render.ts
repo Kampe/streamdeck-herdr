@@ -4,8 +4,9 @@ import { agentGlyph, GLYPH_BOX } from "../render/agent-glyph.js";
 const SIZE = 144;
 
 export function renderQuotaKey(state: QuotaState, provider: string, pool: string, display: "remaining" | "used" = "remaining"): string {
-  const quota = state.status === "ready" ? state.snapshot.providers[provider]?.pools[pool] : undefined;
-  const view = quotaView(state, quota, display);
+  const entry = state.status === "ready" ? state.snapshot.providers[provider] : undefined;
+  const quota = entry?.pools[pool];
+  const view = quotaView(state, quota, display, entry?.error);
   const poolLabel = pool === "all" || pool === "default" ? "" : pool.toUpperCase();
   const iconSize = 34;
   const iconScale = iconSize / GLYPH_BOX;
@@ -38,12 +39,13 @@ function quotaView(
   state: QuotaState,
   quota: QuotaInfo | undefined,
   display: "remaining" | "used",
+  error?: string,
 ): { background: string; foreground: string; value: string; reset: string } {
   if (state.status === "loading") {
     return { background: "#243047", foreground: "#ffffff", value: "…", reset: "loading" };
   }
   if (state.status === "error" || quota === undefined || quota.remaining === null) {
-    return { background: "#4a2530", foreground: "#ffffff", value: "!", reset: "unavailable" };
+    return { background: "#4a2530", foreground: "#ffffff", value: "!", reset: unavailableReason(error ?? (state.status === "error" ? state.message : undefined)) };
   }
   const value = display === "used" ? 100 - quota.remaining : quota.remaining;
   if (quota.stale) {
@@ -56,6 +58,15 @@ function quotaView(
     value: `${Math.round(value)}%`,
     reset: quota.resetsIn,
   };
+}
+
+/** A two-word reason fits under the "!" on a 72px key. */
+export function unavailableReason(error: string | undefined): string {
+  const text = (error ?? "").toLowerCase();
+  if (/rate limited/.test(text)) return "limited";
+  if (/login|log in|expired|credentials|no access token/.test(text)) return "log in";
+  if (/not running|timed out|etimedout|enotfound|econnrefused|unreachable/.test(text)) return "offline";
+  return "unavailable";
 }
 
 function escapeXml(value: string): string {

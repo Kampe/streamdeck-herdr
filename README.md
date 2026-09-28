@@ -6,8 +6,8 @@ sends keys and saved prompts, controls pane layout, and displays live AI-provide
 quota.
 
 Agent and pane controls use Herdr's local socket API. They do not depend on
-global keyboard shortcuts, terminal focus, UI scripting, browser automation,
-or OpenUsage. Provider quota is a separate, optional integration.
+global keyboard shortcuts, terminal focus, UI scripting, or browser automation.
+Provider quota is a separate, optional integration.
 
 ![Herdr agents on a Stream Deck Neo](docs/streamdeck-neo.jpg)
 
@@ -23,8 +23,9 @@ or OpenUsage. Provider quota is a separate, optional integration.
   Stream Deck.
 - Native split, swap, close, interrupt, and prompt actions through the Herdr
   socket protocol.
-- Live Claude, Codex, Antigravity, and Grok quota from OpenUsage, with provider
-  icons, remaining percentage, reset time, and pool selection.
+- Live Claude, Codex, Antigravity, and Grok quota read directly from each
+  provider (the same way OpenUsage does), with provider icons, remaining
+  percentage, reset time, and pool selection.
 - Hardware-native attention and idle queues, workspace filtering, favorites,
   Herdr health, guarded recovery, named-session switching, prompt macros, and
   configurable terminal foregrounding.
@@ -141,53 +142,30 @@ agent. Configure targeting and labels in the Stream Deck Property Inspector.
 
 ## Quota (optional)
 
-Herdr 0.8/protocol 19 does not expose provider billing limits, percentages, or
-reset windows. The core plugin therefore needs only Herdr, but real quota keys
-need an external usage source. A profile with no quota actions never starts
-quota polling and does not require OpenUsage or `herdr-quota`.
+Herdr does not expose provider billing limits, so quota keys read them straight
+from each provider, exactly as [OpenUsage](https://www.openusage.ai/) does: the
+plugin reads the login each CLI already stored on this machine and asks that
+provider's usage endpoint. There is no helper app, no `herdr-quota`, no Python,
+and nothing to install beyond the CLIs you already use. A profile with no quota
+actions never starts polling.
 
-The quota data path is:
+| Provider | Login it reads | Usage source |
+| --- | --- | --- |
+| Claude | `~/.claude/.credentials.json`, else the `Claude Code-credentials` login keychain item | `api.anthropic.com/api/oauth/usage` |
+| Codex | `auth.json` in `$CODEX_HOME`, `~/.config/codex` or `~/.codex` (ChatGPT login) | `chatgpt.com/backend-api/wham/usage` |
+| Antigravity | the running `agy` language server (local CSRF token) | its local `RetrieveUserQuotaSummary` endpoint |
+| Grok | `~/.grok/auth.json` | `cli-chat-proxy.grok.com/v1/billing` |
 
-```text
-Stream Deck plugin → herdr-quota --json → OpenUsage provider adapters
-```
+The plugin never refreshes or writes a login. An expired or missing login shows
+`!` with `log in` rather than a fabricated number; sign in with that CLI and the
+key recovers on the next poll.
 
-The plugin does not scrape provider UIs itself. It runs one shared
-`herdr-quota --json` request, renders only the normalized fields it needs, and
-refreshes every 60 seconds. OpenUsage provides a shared five-minute cache.
-Pressing any quota key runs `herdr-quota --json --force` to bypass that cache and
-sends the focused agent a standing order to spawn and delegate only to the
-selected provider. It does not switch the focused pane; it tells that harness
-how to spend its next round of delegated work. If the provider is unavailable,
-the prompt explicitly asks the harness to report the blocker rather than fall
-back silently.
-
-Runtime dependencies:
-
-- [OpenUsage](https://www.openusage.ai/) and its `openusage` CLI.
-- The `herdr-quota` zsh helper on an executable path.
-- `python3`, used by `herdr-quota` to validate and normalize OpenUsage JSON.
-
-The plugin finds `herdr-quota` in this order:
-
-1. `HERDR_QUOTA_BIN`
-2. `~/bin/herdr-quota`
-3. `/usr/local/bin/herdr-quota`
-4. `/opt/homebrew/bin/herdr-quota`
-
-Install OpenUsage on macOS with:
-
-```zsh
-brew install --cask openusage
-```
-
-Verify the complete chain before adding quota keys:
-
-```zsh
-command -v openusage herdr-quota python3
-openusage --version
-herdr-quota --json | jq '.providers | keys'
-```
+Polling runs every two minutes. Pressing a quota key forces a refresh
+(debounced to once per 15 seconds) and sends the focused agent a standing order
+to spawn and delegate only to the selected provider. It does not switch the
+focused pane; if the provider is unavailable, the prompt asks the harness to
+report the blocker rather than fall back silently. A provider that answers
+`429` is left alone for ten minutes; its last numbers stay on the key, gray.
 
 The Property Inspector supports these views:
 
@@ -198,14 +176,18 @@ The Property Inspector supports these views:
 | Antigravity | `all`, `gemini`, `nonGemini` |
 | Grok | `all`, `default` |
 
-A quota key shows `!` when the helper is missing, OpenUsage fails, or the
-selected provider/pool has no usable data. A gray key means the returned data
-is stale. Remaining quota uses green, amber, and red backgrounds as pressure
-increases.
+Each pool shows its most-spent window (for example the 5-hour session or the
+weekly limit, whichever is tighter). `all` shows the pool with the most
+remaining usable quota: an exhausted Spark, non-Gemini, or model-specific pool
+does not force every provider key to `0%`.
 
-On the development machine used for this fork, OpenUsage, `herdr-quota`, and
-Python 3 are already installed; no additional setup is needed. Most users will
-not have these tools by default and can omit Quota actions entirely.
+Key states:
+
+- Green, amber, red: remaining quota as pressure increases.
+- Gray: stale; the latest poll failed, so the last good numbers are shown.
+- `!` with a reason: `log in` (missing or expired login), `limited` (rate
+  limited), `offline` (network or the agy language server is down), or
+  `unavailable`.
 
 ## Included profiles
 
@@ -227,7 +209,7 @@ Profile:
 ### Stream Deck Neo
 
 This profile includes one optional Codex quota key. Replace it with any Herdr
-action if OpenUsage is not installed.
+action if you do not use Codex.
 
 ### Control profile
 
@@ -242,8 +224,7 @@ Attention · Idle · Favorite · Health · Terminal
 Profile:
 `com.github.yuntan.herdr.sdPlugin/profiles/herdr-control.streamDeckProfile`
 
-The quota-enabled original profile remains available for the local OpenUsage
-setup. Import the control profile when fleet attention and workspace navigation
+The quota-enabled original profile remains available. Import the control profile when fleet attention and workspace navigation
 matter more than quota display.
 
 | Row | Keys |

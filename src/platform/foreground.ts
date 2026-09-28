@@ -6,6 +6,7 @@ const execFileAsync = promisify(execFile);
 export type TerminalApp = "iTerm2" | "Terminal" | "WezTerm";
 export type OsascriptRunner = (args: readonly string[]) => Promise<void>;
 export type WakeRunner = () => Promise<void>;
+export type SaverProbe = () => Promise<boolean>;
 
 function iTermScript(match: string): string {
   const escaped = match.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
@@ -64,13 +65,22 @@ async function wakeDisplay(): Promise<void> {
  * Only send Space when that saver is present; never inject a key
  * key into a live agent just because the terminal has been idle.
  */
-async function clearTmuxScreensaver(run: OsascriptRunner): Promise<void> {
+async function screensaverRunning(): Promise<boolean> {
   try {
     await execFileAsync("/usr/bin/pgrep", ["-f", "cmatrix"], { timeout: 500 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function clearTmuxScreensaver(run: OsascriptRunner, saverRunning: SaverProbe): Promise<void> {
+  try {
+    if (!(await saverRunning())) return;
     // tmux's lock client consumes Space to dismiss the lock screen.
     await run(["-e", 'tell application "System Events" to key code 49']);
   } catch {
-    // No configured saver, or Automation permission is unavailable.
+    // Automation permission is unavailable.
   }
 }
 
@@ -80,17 +90,18 @@ export async function bringTerminalToFront(
   match = "herdr",
   run: OsascriptRunner = runOsascript,
   wake: WakeRunner = wakeDisplay,
+  saverRunning: SaverProbe = screensaverRunning,
 ): Promise<boolean> {
   if (process.platform !== "darwin") return false;
   try {
     await wake();
     await run(["-e", app === "iTerm2" ? iTermScript(match) : simpleTerminalScript(app, match)]);
-    if (app === "iTerm2") await clearTmuxScreensaver(run);
+    if (app === "iTerm2") await clearTmuxScreensaver(run, saverRunning);
     return true;
   } catch {
     return false;
   }
 }
 
-export const bringITermToFront = (run?: OsascriptRunner, wake?: WakeRunner): Promise<boolean> =>
-  bringTerminalToFront("iTerm2", "herdr", run, wake);
+export const bringITermToFront = (run?: OsascriptRunner, wake?: WakeRunner, saverRunning?: SaverProbe): Promise<boolean> =>
+  bringTerminalToFront("iTerm2", "herdr", run, wake, saverRunning);

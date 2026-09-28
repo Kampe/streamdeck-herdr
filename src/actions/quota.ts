@@ -34,7 +34,7 @@ export class Quota extends SingletonAction<QuotaSettings> {
     if (!ev.action.isKey()) {
       return;
     }
-    // Keep the core plugin Herdr-only. OpenUsage is touched only when a quota
+    // Keep the core plugin Herdr-only. Provider usage is polled only when a quota
     // action is actually present in the active profile.
     this.store.start();
     const entry: QuotaEntry = {
@@ -62,7 +62,7 @@ export class Quota extends SingletonAction<QuotaSettings> {
 
   override async onKeyDown(ev: KeyDownEvent<QuotaSettings>): Promise<void> {
     const provider = ev.payload.settings.provider ?? "codex";
-    // Refresh display data, but do not make dispatch wait on OpenUsage. The
+    // Refresh display data, but do not make dispatch wait on provider I/O. The
     // key's primary action is the provider-only standing order; quota I/O runs
     // in parallel so a slow helper cannot delay the focused agent.
     void this.store.refresh(true).catch((error) => {

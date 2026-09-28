@@ -1,25 +1,17 @@
-import { execFile } from "node:child_process";
-import { access } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import { promisify } from "node:util";
+import { FETCHERS, type Fetcher } from "./providers.js";
+import { providerPools, staleCopy, type ProviderQuota, type QuotaSnapshot } from "./snapshot.js";
 
-const execFileAsync = promisify(execFile);
-const REFRESH_INTERVAL_MS = 60_000;
+export type { QuotaInfo, QuotaSnapshot } from "./snapshot.js";
 
-export type QuotaInfo = {
-  available: boolean;
-  reason: string;
-  stale: boolean;
-  remaining: number | null;
-  resetsIn: string;
-  classification: string;
-};
-
-export type QuotaSnapshot = {
-  generatedAt: string;
-  providers: Record<string, { stale: boolean; pools: Record<string, QuotaInfo> }>;
-};
+/**
+ * Quota comes straight from each tool's own provider (see providers.ts), the
+ * way OpenUsage gets it. Two minutes between polls keeps well clear of the
+ * usage endpoints' rate limits; a key press forces a refresh, debounced.
+ */
+const REFRESH_INTERVAL_MS = 120_000;
+const FORCE_DEBOUNCE_MS = 15_000;
+/** After a provider rate-limits us, leave it alone this long (herd polls it too). */
+const RATE_LIMIT_BACKOFF_MS = 600_000;
 
 export type QuotaState =
   | { status: "loading" }
@@ -28,51 +20,22 @@ export type QuotaState =
 
 export type QuotaListener = (state: QuotaState) => void;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function parseQuotaSnapshot(value: unknown): QuotaSnapshot | null {
-  if (!isRecord(value) || !isRecord(value.providers)) {
-    return null;
-  }
-
-  const providers: QuotaSnapshot["providers"] = {};
-  for (const [providerName, providerValue] of Object.entries(value.providers)) {
-    if (!isRecord(providerValue) || !isRecord(providerValue.pools)) {
-      continue;
-    }
-    const pools: Record<string, QuotaInfo> = {};
-    for (const [poolName, poolValue] of Object.entries(providerValue.pools)) {
-      if (!isRecord(poolValue)) {
-        continue;
-      }
-      pools[poolName] = {
-        available: poolValue.available === true,
-        reason: typeof poolValue.reason === "string" ? poolValue.reason : "unknown",
-        stale: poolValue.stale === true,
-        remaining: typeof poolValue.remaining === "number" ? poolValue.remaining : null,
-        resetsIn: typeof poolValue.resetsIn === "string" ? poolValue.resetsIn : "?",
-        classification:
-          typeof poolValue.class === "string" ? poolValue.class : "unknown",
-      };
-    }
-    providers[providerName] = { stale: providerValue.stale === true, pools };
-  }
-
-  return {
-    generatedAt: typeof value.generatedAt === "string" ? value.generatedAt : "",
-    providers,
-  };
-}
-
 export class QuotaStore {
   readonly #listeners = new Set<QuotaListener>();
+  readonly #fetchers: Record<string, Fetcher>;
+  readonly #now: () => number;
   #state: QuotaState = { status: "loading" };
+  #providers: Record<string, ProviderQuota> = {};
   #timer: ReturnType<typeof setInterval> | null = null;
   #inFlight: Promise<void> | null = null;
-  #binary: Promise<string> | null = null;
+  #lastLoad = Number.NEGATIVE_INFINITY;
+  readonly #cooldownUntil = new Map<string, number>();
   #started = false;
+
+  constructor(fetchers: Record<string, Fetcher> = FETCHERS, now: () => number = Date.now) {
+    this.#fetchers = fetchers;
+    this.#now = now;
+  }
 
   get state(): QuotaState {
     return this.#state;
@@ -97,37 +60,66 @@ export class QuotaStore {
     this.#timer = setInterval(() => void this.refresh(), REFRESH_INTERVAL_MS);
   }
 
+  stop(): void {
+    if (this.#timer !== null) {
+      clearInterval(this.#timer);
+      this.#timer = null;
+    }
+  }
+
   refresh(force = false): Promise<void> {
     if (this.#inFlight !== null) {
       return this.#inFlight;
     }
-    this.#inFlight = this.#load(force).finally(() => {
+    if (force && this.#now() - this.#lastLoad < FORCE_DEBOUNCE_MS) {
+      return Promise.resolve();
+    }
+    this.#inFlight = this.#load().finally(() => {
       this.#inFlight = null;
     });
     return this.#inFlight;
   }
 
-  async #load(force: boolean): Promise<void> {
-    try {
-      const binary = await (this.#binary ??= findQuotaBinary());
-      const path = [join(homedir(), "bin"), "/usr/local/bin", "/opt/homebrew/bin", process.env.PATH]
-        .filter((item): item is string => item !== undefined && item !== "")
-        .join(":");
-      const { stdout } = await execFileAsync(binary, force ? ["--json", "--force"] : ["--json"], {
-        encoding: "utf8",
-        env: { ...process.env, PATH: path },
-        maxBuffer: 2 * 1024 * 1024,
-        timeout: 30_000,
-      });
-      const snapshot = parseQuotaSnapshot(JSON.parse(stdout));
-      if (snapshot === null) {
-        throw new TypeError("herdr-quota returned an unsupported document");
+  async #load(): Promise<void> {
+    this.#lastLoad = this.#now();
+    const names = Object.keys(this.#fetchers);
+    const results = await Promise.allSettled(
+      names.map((name) =>
+        (this.#cooldownUntil.get(name) ?? 0) > this.#now()
+          ? Promise.reject(new Error(`${name}: rate limited, backing off`))
+          : this.#fetchers[name](),
+      ),
+    );
+    const errors: string[] = [];
+    results.forEach((result, i) => {
+      const name = names[i];
+      if (result.status === "fulfilled" && result.value.length > 0) {
+        this.#providers[name] = { stale: false, pools: providerPools(name, result.value, this.#now()) };
+        return;
       }
-      this.#setState({ status: "ready", snapshot });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.#setState({ status: "error", message });
-    }
+      const message =
+        result.status === "rejected"
+          ? result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason)
+          : `${name}: no usage windows reported`;
+      errors.push(message);
+      if (/rate limited$/.test(message)) {
+        this.#cooldownUntil.set(name, this.#now() + RATE_LIMIT_BACKOFF_MS);
+      }
+      const previous = this.#providers[name];
+      // Keep the last good numbers visible, flagged stale, rather than blanking the key.
+      this.#providers[name] =
+        previous !== undefined && Object.keys(previous.pools).length > 0
+          ? staleCopy(previous, message)
+          : { stale: true, error: message, pools: {} };
+    });
+    const anyData = Object.values(this.#providers).some((p) => Object.keys(p.pools).length > 0);
+    this.#setState(
+      anyData
+        ? { status: "ready", snapshot: { generatedAt: new Date(this.#now()).toISOString(), providers: { ...this.#providers } } }
+        : { status: "error", message: errors.join("; ") },
+    );
   }
 
   #setState(state: QuotaState): void {
@@ -136,25 +128,4 @@ export class QuotaStore {
       listener(state);
     }
   }
-}
-
-async function findQuotaBinary(): Promise<string> {
-  const candidates = [
-    process.env.HERDR_QUOTA_BIN,
-    join(homedir(), "bin", "herdr-quota"),
-    "/usr/local/bin/herdr-quota",
-    "/opt/homebrew/bin/herdr-quota",
-  ];
-  for (const candidate of candidates) {
-    if (candidate === undefined || candidate === "") {
-      continue;
-    }
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Try the next portable install location.
-    }
-  }
-  throw new Error("herdr-quota was not found");
 }

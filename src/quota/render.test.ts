@@ -46,3 +46,14 @@ describe("renderQuotaKey", () => {
     expect(svg).not.toContain("73%");
   });
 });
+
+describe("unavailableReason", () => {
+  it("turns provider errors into a short key label", async () => {
+    const { unavailableReason } = await import("./render.js");
+    expect(unavailableReason("claude usage: rate limited")).toBe("limited");
+    expect(unavailableReason("codex: no ChatGPT login (an API key cannot read plan quota); run codex login")).toBe("log in");
+    expect(unavailableReason("antigravity quota: login expired (401)")).toBe("log in");
+    expect(unavailableReason("antigravity: language server is not running (open agy)")).toBe("offline");
+    expect(unavailableReason(undefined)).toBe("unavailable");
+  });
+});
