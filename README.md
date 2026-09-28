@@ -153,7 +153,7 @@ actions never starts polling.
 | --- | --- | --- |
 | Claude | `~/.claude/.credentials.json`, else the `Claude Code-credentials` login keychain item | `api.anthropic.com/api/oauth/usage` |
 | Codex | `auth.json` in `$CODEX_HOME`, `~/.config/codex` or `~/.codex` (ChatGPT login) | `chatgpt.com/backend-api/wham/usage` |
-| Antigravity | the running `agy` language server (local CSRF token) | its local `RetrieveUserQuotaSummary` endpoint |
+| Antigravity | the IDE language server's CSRF token when the IDE is open, else the agy CLI's `~/.gemini/antigravity-cli/antigravity-oauth-token` | local `RetrieveUserQuotaSummary` (5h + weekly), else `cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels` (per-model, ~5h) |
 | Grok | `~/.grok/auth.json` | `cli-chat-proxy.grok.com/v1/billing` |
 
 The plugin never refreshes or writes a login. An expired or missing login shows
@@ -185,9 +185,9 @@ Key states:
 
 - Green, amber, red: remaining quota as pressure increases.
 - Gray: stale; the latest poll failed, so the last good numbers are shown.
-- `!` with a reason: `log in` (missing or expired login), `limited` (rate
-  limited), `offline` (network or the agy language server is down), or
-  `unavailable`.
+- `!` with a reason: `log in` (missing or expired login; for Antigravity, open
+  agy so it refreshes its token), `limited` (rate limited), `offline`
+  (network down), or `unavailable`.
 
 ## Included profiles
 

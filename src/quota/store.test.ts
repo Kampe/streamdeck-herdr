@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { antigravityWindows, claudeTokenFrom, claudeWindows, codexWindows, grokWindows, QuotaError } from "./providers.js";
+import { antigravityModelWindows, antigravityTokenFrom, antigravityWindows, claudeTokenFrom, claudeWindows, codexWindows, grokWindows, QuotaError } from "./providers.js";
 import { classify, humanReset, providerPools } from "./snapshot.js";
 import { QuotaStore } from "./store.js";
 
@@ -56,6 +56,29 @@ describe("provider response parsing", () => {
       ["geminiSession", 25],
       ["nonGeminiWeekly", 80],
     ]);
+  });
+
+  it("groups agy's per-model cloud quota into Gemini and non-Gemini pools", () => {
+    const windows = antigravityModelWindows({
+      models: {
+        "gemini-3.1-pro-high": { modelProvider: "MODEL_PROVIDER_GOOGLE", quotaInfo: { remainingFraction: 0.6, resetTime: inHours(4) } },
+        "gemini-2.5-flash": { modelProvider: "MODEL_PROVIDER_GOOGLE", quotaInfo: { remainingFraction: 0.9, resetTime: inHours(4) } },
+        "claude-sonnet-4-6": { modelProvider: "MODEL_PROVIDER_ANTHROPIC", quotaInfo: { remainingFraction: 0.25, resetTime: inHours(2) } },
+        "gpt-oss-120b-medium": { modelProvider: "MODEL_PROVIDER_OPENAI", quotaInfo: { remainingFraction: 1, resetTime: inHours(2) } },
+        // Internal completion models have no reset window and are ignored.
+        "tab_flash_lite_preview": { modelProvider: "MODEL_PROVIDER_GOOGLE", quotaInfo: { remainingFraction: 0 } },
+        "chat_20706": { modelProvider: "MODEL_PROVIDER_GOOGLE", quotaInfo: { remainingFraction: 0, resetTime: inHours(1) } },
+      },
+    });
+    expect(windows.map((w) => [w.name, Math.round(w.used), w.resetsAt])).toEqual([
+      ["geminiSession", 40, inHours(4)],
+      ["nonGeminiSession", 75, inHours(2)],
+    ]);
+  });
+
+  it("refuses an expired agy token instead of refreshing it", () => {
+    expect(() => antigravityTokenFrom({ token: { access_token: "a", expiry: inHours(-1) } }, NOW)).toThrow(/open agy/);
+    expect(antigravityTokenFrom({ token: { access_token: "a", expiry: inHours(1) } }, NOW)).toBe("a");
   });
 
   it("reads Grok's weekly credit period", () => {
