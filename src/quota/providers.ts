@@ -16,8 +16,7 @@ import { promisify } from "node:util";
  * against live responses (ported from OpenUsage's providers):
  *   claude       GET  api.anthropic.com/api/oauth/usage
  *   codex        GET  chatgpt.com/backend-api/wham/usage
- *   antigravity  POST <IDE language server>/…/RetrieveUserQuotaSummary, else
- *                POST cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels
+ *   antigravity  POST cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
  *   grok         GET  cli-chat-proxy.grok.com/v1/billing?format=credits
  *
  * Every fetcher is read-only: it never refreshes or writes credentials. A
@@ -51,7 +50,7 @@ type HttpResult = { status: number; body: string };
 
 function httpJson(
   url: string,
-  init: { method?: string; headers?: Record<string, string>; body?: string; insecureLocal?: boolean } = {},
+  init: { method?: string; headers?: Record<string, string>; body?: string } = {},
 ): Promise<HttpResult> {
   const target = new URL(url);
   const send = target.protocol === "https:" ? httpsRequest : httpRequest;
@@ -62,8 +61,6 @@ function httpJson(
         method: init.method ?? "GET",
         headers: { "User-Agent": USER_AGENT, Accept: "application/json", ...init.headers },
         timeout: TIMEOUT_MS,
-        // Only the Antigravity language server on 127.0.0.1 uses a self-signed cert.
-        ...(init.insecureLocal === true && target.hostname === "127.0.0.1" ? { rejectUnauthorized: false } : {}),
       },
       (res) => {
         let body = "";
@@ -298,66 +295,12 @@ export function antigravityWindows(value: unknown): Window[] {
   return windows;
 }
 
-function flagValue(fields: string[], flag: string): string | undefined {
-  for (let i = 0; i < fields.length; i += 1) {
-    if (fields[i] === flag && i + 1 < fields.length) {
-      return fields[i + 1];
-    }
-    if (fields[i].startsWith(`${flag}=`)) {
-      return fields[i].slice(flag.length + 1);
-    }
-  }
-  return undefined;
-}
-
-/** Antigravity serves quota from its own language server; find the running one. */
-async function discoverAntigravity(): Promise<{ csrf: string; urls: string[] }> {
-  const { stdout } = await execFileAsync("ps", ["-ax", "-o", "pid=,command="], { timeout: 5_000, maxBuffer: 8 * 1024 * 1024 });
-  for (const line of stdout.split("\n")) {
-    const fields = line.trim().split(/\s+/);
-    if (fields.length < 2) {
-      continue;
-    }
-    const command = fields.slice(1).join(" ").toLowerCase();
-    // Only the IDE's language server carries its CSRF token on the command
-    // line. The agy CLI serves the same endpoint but keeps its token in
-    // memory, so probing it only ever returns 401 "missing CSRF token".
-    if (!command.includes("language_server")) {
-      continue;
-    }
-    if (command.includes("--app_data_dir") && !command.includes("antigravity")) {
-      continue;
-    }
-    const csrf = flagValue(fields, "--csrf_token");
-    if (csrf === undefined || csrf === "") {
-      continue;
-    }
-    const urls: string[] = [];
-    try {
-      const { stdout: lsof } = await execFileAsync("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-a", "-p", fields[0]], { timeout: 5_000 });
-      const ports = new Set<number>();
-      for (const match of lsof.matchAll(/:(\d+) \(LISTEN\)/g)) {
-        ports.add(Number(match[1]));
-      }
-      for (const port of ports) {
-        urls.push(`https://127.0.0.1:${port}`, `http://127.0.0.1:${port}`);
-      }
-    } catch {
-      // No lsof result; the extension port below may still work.
-    }
-    const extension = Number(flagValue(fields, "--extension_server_port") ?? "0");
-    if (extension > 0) {
-      urls.push(`http://127.0.0.1:${extension}`);
-    }
-    if (urls.length > 0) {
-      return { csrf, urls };
-    }
-  }
-  throw new QuotaError("antigravity: IDE language server is not running");
-}
-
-// Cloud fallback: the agy CLI's own Google OAuth token against Cloud Code,
-// which reports a remaining fraction per model on a ~5h window.
+/**
+ * Antigravity's own language server (IDE or agy CLI) gets these buckets from
+ * Cloud Code's retrieveUserQuotaSummary; call it directly with the agy CLI's
+ * stored Google login. Same buckets agy's /usage shows: Gemini and non-Gemini
+ * (Claude/GPT), each with a 5h and a weekly window.
+ */
 const AGY_TOKEN_FILE = join(homedir(), ".gemini", "antigravity-cli", "antigravity-oauth-token");
 
 export function antigravityTokenFrom(value: unknown, now = Date.now()): string {
@@ -374,88 +317,19 @@ export function antigravityTokenFrom(value: unknown, now = Date.now()): string {
   return access;
 }
 
-/** Group per-model Cloud Code quota into the Gemini and non-Gemini pools. */
-export function antigravityModelWindows(value: unknown): Window[] {
-  const models = isRecord(value) && isRecord(value.models) ? value.models : {};
-  const pools: Record<"geminiSession" | "nonGeminiSession", { used: number; resetsAt?: string } | undefined> = {
-    geminiSession: undefined,
-    nonGeminiSession: undefined,
-  };
-  for (const [id, model] of Object.entries(models)) {
-    if (!isRecord(model) || !isRecord(model.quotaInfo)) {
-      continue;
-    }
-    const fraction = num(model.quotaInfo.remainingFraction);
-    const resetsAt = str(model.quotaInfo.resetTime);
-    // Internal completion/tab models carry no reset window; they are not chat quota.
-    if (fraction === undefined || fraction < 0 || fraction > 1 || resetsAt === undefined) {
-      continue;
-    }
-    const provider = String(model.modelProvider ?? "");
-    const gemini = provider === "MODEL_PROVIDER_GOOGLE" ? id.startsWith("gemini") : false;
-    if (provider === "MODEL_PROVIDER_GOOGLE" && !gemini) {
-      continue;
-    }
-    const key = gemini ? "geminiSession" : "nonGeminiSession";
-    const used = (1 - fraction) * 100;
-    const current = pools[key];
-    // A pool is only as healthy as its most-spent model.
-    if (current === undefined || used > current.used) {
-      pools[key] = { used, resetsAt };
-    }
-  }
-  return (Object.entries(pools) as [string, { used: number; resetsAt?: string } | undefined][])
-    .filter((entry): entry is [string, { used: number; resetsAt?: string }] => entry[1] !== undefined)
-    .map(([name, pool]) => ({ name, used: pool.used, resetsAt: pool.resetsAt, windowSeconds: 5 * 3600 }));
-}
-
-async function fetchAntigravityCloud(): Promise<Window[]> {
+export const fetchAntigravity: Fetcher = async () => {
   const file = await readJsonFirst([AGY_TOKEN_FILE]);
   if (file === null) {
     throw new QuotaError("antigravity: no agy login found; sign in with agy");
   }
   const token = antigravityTokenFrom(file.value);
-  const res = await httpJson("https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels", {
+  const res = await httpJson("https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary", {
     method: "POST",
     // Cloud Code rejects unknown clients with 403; identify as the agy client.
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "antigravity" },
     body: "{}",
   });
-  return antigravityModelWindows(checkStatus("antigravity quota", res));
-}
-
-async function fetchAntigravityLocal(): Promise<Window[]> {
-  const { csrf, urls } = await discoverAntigravity();
-  let lastError: unknown = new QuotaError("antigravity: no usable port");
-  for (const base of urls) {
-    try {
-      const res = await httpJson(`${base}/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-codeium-csrf-token": csrf },
-        body: "{}",
-        insecureLocal: true,
-      });
-      const windows = antigravityWindows(checkStatus("antigravity quota", res));
-      if (windows.length > 0) {
-        return windows;
-      }
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError;
-}
-
-/**
- * The IDE's language server reports both 5h and weekly buckets, so it wins
- * when it is running; otherwise the agy CLI's login answers from the cloud.
- */
-export const fetchAntigravity: Fetcher = async () => {
-  try {
-    return await fetchAntigravityLocal();
-  } catch {
-    return fetchAntigravityCloud();
-  }
+  return antigravityWindows(checkStatus("antigravity quota", res));
 };
 
 // ---------- grok ----------
